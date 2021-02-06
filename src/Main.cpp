@@ -9,6 +9,7 @@
 #include <backends/imgui_impl_opengl3.h>
 
 #include "ext.hpp"
+#include "gtx/rotate_vector.hpp"
 
 struct Shader
 {
@@ -99,10 +100,47 @@ int main( int argc, const char * argv[] )
   bool automaticCamera = false;
   glm::mat4x4 viewMatrix;
   glm::mat4x4 projectionMatrix;
-  glm::vec3 cameraPosition( 500.0f, 500.0f, -500.0f );
-
+  float cameraDistance = 500.0f;
+  bool movingCamera = false;
+  float cameraYaw = 0.0f;
+  float cameraPitch = 0.0f;
+  float mouseClickPosX = 0.0f;
+  float mouseClickPosY = 0.0f;
   while ( !Renderer::WantsToQuit() && !appWantsToQuit )
   {
+    //////////////////////////////////////////////////////////////////////////
+    // Mouse rotation
+
+    for ( int i = 0; i < Renderer::mouseEventBufferCount; i++ )
+    {
+      switch ( Renderer::mouseEventBuffer[ i ].eventType )
+      {
+        case Renderer::MOUSEEVENTTYPE_MOVE:
+          if ( movingCamera )
+          {
+            const float rotationSpeed = 130.0f;
+            cameraYaw -= (Renderer::mouseEventBuffer[ i ].x - mouseClickPosX) / rotationSpeed;
+            cameraPitch += (Renderer::mouseEventBuffer[ i ].y - mouseClickPosY) / rotationSpeed;
+            mouseClickPosX = Renderer::mouseEventBuffer[ i ].x;
+            mouseClickPosY = Renderer::mouseEventBuffer[ i ].y;
+          }
+          break;
+        case Renderer::MOUSEEVENTTYPE_DOWN:
+          movingCamera = true;
+          mouseClickPosX = Renderer::mouseEventBuffer[ i ].x;
+          mouseClickPosY = Renderer::mouseEventBuffer[ i ].y;
+          break;
+        case Renderer::MOUSEEVENTTYPE_UP:
+          movingCamera = false;
+          break;
+        case Renderer::MOUSEEVENTTYPE_SCROLL:
+          const float aspect = 1.1f;
+          cameraDistance *= Renderer::mouseEventBuffer[ i ].y < 0 ? aspect : 1 / aspect;
+          break;
+      }
+    }
+    Renderer::mouseEventBufferCount = 0;
+
     Renderer::StartFrame();
 
     //////////////////////////////////////////////////////////////////////////
@@ -147,22 +185,20 @@ int main( int argc, const char * argv[] )
       ImGui::EndMainMenuBar();
     }
 
-    if ( ImGui::Begin( "Camera" ) )
-    {
-      ImGui::DragFloat3( "Camera", (float *) &cameraPosition );
-      ImGui::End();
-    }
-
     ImGui::Render();
 
     //////////////////////////////////////////////////////////////////////////
     // Mesh render
 
     float verticalFovInRadian = 0.5f;
-    projectionMatrix = glm::perspective( verticalFovInRadian, settings.nWidth / (float) settings.nHeight, 0.01f, glm::length( cameraPosition ) * 2.0f );
+    projectionMatrix = glm::perspective( verticalFovInRadian, settings.nWidth / (float) settings.nHeight, 0.01f, cameraDistance * 2.0f );
     Renderer::SetShaderConstant( "mat_projection", projectionMatrix );
 
-    viewMatrix = glm::lookAtRH( cameraPosition, glm::vec3( 0.0f, 0.0f, 0.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
+    glm::vec3 cameraPosition( 0.0f, 0.0f, -1.0f );
+    cameraPosition = glm::rotateX( cameraPosition, cameraPitch );
+    cameraPosition = glm::rotateY( cameraPosition, cameraYaw );
+
+    viewMatrix = glm::lookAtRH( cameraPosition * cameraDistance, glm::vec3( 0.0f, 0.0f, 0.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
     Renderer::SetShaderConstant( "mat_view", viewMatrix );
 
     for ( std::map<int, Geometry::Mesh>::iterator it = Geometry::mMeshes.begin(); it != Geometry::mMeshes.end(); it++ )
