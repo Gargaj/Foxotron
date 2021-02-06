@@ -1,53 +1,54 @@
 #include <stdio.h>
 
 #include "Renderer.h"
+#include "Geometry.h"
 
 #define IMGUI_IMPL_OPENGL_LOADER_GLEW
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 
-#include <assimp/scene.h>
-#include <assimp/postProcess.h>
-#include <assimp/Importer.hpp>
-#include <assimp/IOStream.hpp>
-#include <assimp/IOSystem.hpp>
-#include <assimp/ProgressHandler.hpp>
-#include <assimp/LogStream.hpp>
-#include <assimp/DefaultLogger.hpp>
-#include <assimp/Exporter.hpp>
 
-Assimp::Importer importer;
-
-bool load_mesh( const char * _path )
+struct Shader
 {
-  Assimp::DefaultLogger::create( "", Assimp::Logger::VERBOSE );
-  importer.SetPropertyInteger( AI_CONFIG_PP_SBBC_MAX_BONES, 24 );
+  const char * name;
+  const char * vertexShaderPath;
+  const char * fragmentShaderPath;
+} shaders[] = {
+  { "Basic SpecGloss", "Shaders/basic_specgloss.fs", "Shaders/basic_specgloss.fs" },
+  { NULL, NULL, NULL, },
+};
 
-  unsigned int dwLoadFlags =
-    aiProcess_CalcTangentSpace |
-    aiProcess_Triangulate |
-    aiProcess_JoinIdenticalVertices |
-    aiProcess_SortByPType |
-    aiProcess_MakeLeftHanded |
-    aiProcess_FlipWindingOrder |
-    aiProcess_TransformUVCoords |
-    aiProcess_FlipUVs |
-    aiProcess_SplitByBoneCount |
-    0;
-
-  const aiScene * scene = importer.ReadFile( _path, dwLoadFlags );
-  if ( !scene )
+Shader * current_shader = NULL;
+bool load_shader( Shader * shader )
+{
+  char vertexShader[ 16 * 1024 ] = { 0 };
+  FILE * fileVS = fopen( shader->vertexShaderPath, "rb" );
+  if ( fileVS )
   {
+    fread( vertexShader, 1, 16 * 1024, fileVS );
+    fclose( fileVS );
+  }
+
+  char fragmentShader[ 16 * 1024 ] = { 0 };
+  FILE * fileFS = fopen( shader->fragmentShaderPath, "rb" );
+  if ( fileFS )
+  {
+    fread( fragmentShader, 1, 16 * 1024, fileFS );
+    fclose( fileFS );
+  }
+
+  char error[ 4096 ];
+  if ( !Renderer::ReloadShaders( vertexShader, (int) strlen( vertexShader ), fragmentShader, (int) strlen( fragmentShader ), error, 4096 ) )
+  {
+    printf( "Shader load failed: %s\n", error );
     return false;
   }
 
-  Assimp::DefaultLogger::kill();
+  current_shader = shader;
 
   return true;
 }
-
-
 
 int main( int argc, const char * argv[] )
 {
@@ -81,9 +82,14 @@ int main( int argc, const char * argv[] )
   ImGui_ImplGlfw_InitForOpenGL( Renderer::mWindow, true );
   ImGui_ImplOpenGL3_Init();
 
-  if ( !load_mesh( argv[ 1 ] ) )
+  if ( !Geometry::LoadMesh( argv[ 1 ] ) )
   {
     return -3;
+  }
+
+  if ( !load_shader( &shaders[0] ) )
+  {
+    return -4;
   }
 
   //////////////////////////////////////////////////////////////////////////
@@ -114,6 +120,19 @@ int main( int argc, const char * argv[] )
         }
         ImGui::EndMenu();
       }
+      if ( ImGui::BeginMenu( "Shaders" ) )
+      {
+        for ( int i = 0; shaders[ i ].name; i++ )
+        {
+          bool selected = &shaders[ i ] == current_shader;
+          if ( ImGui::MenuItem( shaders[ i ].name, NULL, &selected ) )
+          {
+            load_shader( &shaders[ i ] );
+          }
+        }
+        ImGui::EndMenu();
+      }
+
 
       ImGui::EndMainMenuBar();
     }
@@ -136,6 +155,8 @@ int main( int argc, const char * argv[] )
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplGlfw_Shutdown();
   ImGui::DestroyContext();
+
+  Geometry::UnloadMesh();
 
   Renderer::Close();
 
