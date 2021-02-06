@@ -22,7 +22,8 @@ namespace Renderer
 GLFWwindow * mWindow = NULL;
 bool run = true;
 
-GLuint theShader = 0;
+GLuint shaderProgram = 0;
+GLuint vertexArray = 0;
 
 int nWidth = 0;
 int nHeight = 0;
@@ -59,7 +60,7 @@ void scroll_callback( GLFWwindow * window, double xoffset, double yoffset );
 bool Open( RENDERER_SETTINGS * settings )
 {
   glfwSetErrorCallback( error_callback );
-  theShader = 0;
+  shaderProgram = 0;
 
 #ifdef __APPLE__
   glfwInitHint( GLFW_COCOA_CHDIR_RESOURCES, GLFW_FALSE );
@@ -149,6 +150,8 @@ bool Open( RENDERER_SETTINGS * settings )
 
   glViewport( 0, 0, nWidth, nHeight );
 
+  glGenVertexArrays( 1, &vertexArray );
+
   run = true;
 
   return true;
@@ -195,10 +198,28 @@ void scroll_callback( GLFWwindow * window, double xoffset, double yoffset )
   mouseEventBufferCount++;
 }
 
+void __SetupVertexArray( const char * name, int sizeInFloats, int & offsetInFloats )
+{
+  unsigned int stride = sizeof( float ) * 14;
+
+  GLint location = glGetAttribLocation( shaderProgram, name );
+  if ( location >= 0 )
+  {
+    glVertexAttribPointer( location, sizeInFloats, GL_FLOAT, GL_FALSE, stride, (GLvoid *) ( offsetInFloats * sizeof( GLfloat ) ) );
+    glEnableVertexAttribArray( location );
+  }
+
+  offsetInFloats += sizeInFloats;
+}
+
 void StartFrame()
 {
   glClearColor( 0.08f, 0.18f, 0.18f, 1.0f );
   glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
+
+  glEnable( GL_DEPTH_TEST );
+  glUseProgram( shaderProgram );
+
 }
 void EndFrame()
 {
@@ -266,31 +287,50 @@ bool ReloadShaders( const char * szVertexShaderCode, int nVertexShaderCodeSize, 
     return false;
   }
 
-  if ( theShader )
+  if ( shaderProgram )
   {
-    glDeleteProgram( theShader );
+    glDeleteProgram( shaderProgram );
   }
 
-  theShader = program;
+  shaderProgram = program;
+
+  glUseProgram( shaderProgram );
+  glBindVertexArray( vertexArray );
+
+  int offset = 0;
+  __SetupVertexArray( "in_pos", 3, offset );
+  __SetupVertexArray( "in_normal", 3, offset );
+  __SetupVertexArray( "in_tangent", 3, offset );
+  __SetupVertexArray( "in_binormal", 3, offset );
+  __SetupVertexArray( "in_texcoord", 2, offset );
 
   return true;
 }
 
 void SetShaderConstant( const char * szConstName, float x )
 {
-  GLint location = glGetUniformLocation( theShader, szConstName );
+  GLint location = glGetUniformLocation( shaderProgram, szConstName );
   if ( location != -1 )
   {
-    glProgramUniform1f( theShader, location, x );
+    glProgramUniform1f( shaderProgram, location, x );
   }
 }
 
 void SetShaderConstant( const char * szConstName, float x, float y )
 {
-  GLint location = glGetUniformLocation( theShader, szConstName );
+  GLint location = glGetUniformLocation( shaderProgram, szConstName );
   if ( location != -1 )
   {
-    glProgramUniform2f( theShader, location, x, y );
+    glProgramUniform2f( shaderProgram, location, x, y );
+  }
+}
+
+void SetShaderConstant( const char * szConstName, glm::mat4x4 & matrix )
+{
+  GLint location = glGetUniformLocation( shaderProgram, szConstName );
+  if ( location != -1 )
+  {
+    glProgramUniformMatrix4fv( shaderProgram, location, 1, FALSE, (float*)&matrix );
   }
 }
 
@@ -404,10 +444,10 @@ void SetShaderTexture( const char * szTextureName, Texture * tex )
   if ( !tex )
     return;
 
-  GLint location = glGetUniformLocation( theShader, szTextureName );
+  GLint location = glGetUniformLocation( shaderProgram, szTextureName );
   if ( location != -1 )
   {
-    glProgramUniform1i( theShader, location, ( (GLTexture *) tex )->unit );
+    glProgramUniform1i( shaderProgram, location, ( (GLTexture *) tex )->unit );
     glActiveTexture( GL_TEXTURE0 + ( (GLTexture *) tex )->unit );
     switch ( tex->type )
     {

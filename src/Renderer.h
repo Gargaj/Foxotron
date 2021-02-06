@@ -1,6 +1,8 @@
 #define GLFW_INCLUDE_NONE
 #include "GLFW/glfw3.h"
 
+#include <glm.hpp>
+
 typedef enum
 {
   RENDERER_WINDOWMODE_WINDOWED = 0,
@@ -36,6 +38,7 @@ void RenderFullscreenQuad();
 bool ReloadShaders( const char * szVertexShaderCode, int nVertexShaderCodeSize, const char * szFragmentShaderCode, int nFragmentShaderCodeSize, char * szErrorBuffer, int nErrorBufferSize );
 void SetShaderConstant( const char * szConstName, float x );
 void SetShaderConstant( const char * szConstName, float x, float y );
+void SetShaderConstant( const char * szConstName, glm::mat4x4 & matrix );
 
 void Close();
 
