@@ -49,6 +49,8 @@ endif ()
 add_subdirectory(${CMAKE_SOURCE_DIR}/externals/assimp/)
 set(TRNT_PROJECT_INCLUDES ${TRNT_PROJECT_INCLUDES} ${CMAKE_SOURCE_DIR}/externals/assimp/include ${CMAKE_CURRENT_BINARY_DIR}/externals/assimp/include)
 set(TRNT_PROJECT_LIBS ${TRNT_PROJECT_LIBS} assimp)
+target_compile_options(assimp PUBLIC "$<$<CONFIG:Release>:/MT>")
+target_compile_options(zlibstatic PUBLIC "$<$<CONFIG:Release>:/MT>")
 
 ##############################################################################
 # GLM
