@@ -14,12 +14,7 @@
 #include "Renderer.h"
 #include <string.h>
 
-#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-
-#ifdef __APPLE__
-#include "../TouchBar.h"
-#endif
 
 namespace Renderer
 {
@@ -115,7 +110,7 @@ namespace Renderer
 
     GLFWmonitor *monitor = settings->windowMode == RENDERER_WINDOWMODE_FULLSCREEN ? glfwGetPrimaryMonitor() : NULL;
 
-    mWindow = glfwCreateWindow(nWidth, nHeight, "BONZOMATIC - GLFW edition", monitor, NULL);
+    mWindow = glfwCreateWindow(nWidth, nHeight, "TURNTABLINATOR v0.0.1", monitor, NULL);
     if (!mWindow)
     {
       printf("[GLFW] Window creation failed\n");
@@ -123,12 +118,6 @@ namespace Renderer
       return false;
     }
 
-#ifdef __APPLE__
-#ifdef BONZOMATIC_ENABLE_TOUCHBAR
-    ShowTouchBar(mWindow);
-#endif
-#endif
-      
     glfwMakeContextCurrent(mWindow);
 
     // TODO: here add text callbacks
@@ -308,8 +297,8 @@ namespace Renderer
   void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
   {
     mouseEventBuffer[mouseEventBufferCount].eventType = MOUSEEVENTTYPE_MOVE;
-    mouseEventBuffer[mouseEventBufferCount].x = xpos;
-    mouseEventBuffer[mouseEventBufferCount].y = ypos;
+    mouseEventBuffer[mouseEventBufferCount].x = (float)xpos;
+    mouseEventBuffer[mouseEventBufferCount].y = (float)ypos;
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) mouseEventBuffer[mouseEventBufferCount].button = MOUSEBUTTON_LEFT;
     mouseEventBufferCount++;
   }
@@ -323,8 +312,8 @@ namespace Renderer
     }
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
-    mouseEventBuffer[mouseEventBufferCount].x = xpos;
-    mouseEventBuffer[mouseEventBufferCount].y = ypos;
+    mouseEventBuffer[mouseEventBufferCount].x = (float)xpos;
+    mouseEventBuffer[mouseEventBufferCount].y = (float)ypos;
     switch(button)
     {
       case GLFW_MOUSE_BUTTON_MIDDLE: mouseEventBuffer[mouseEventBufferCount].button = MOUSEBUTTON_MIDDLE; break;
@@ -337,8 +326,8 @@ namespace Renderer
   void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
   {
     mouseEventBuffer[mouseEventBufferCount].eventType = MOUSEEVENTTYPE_SCROLL;
-    mouseEventBuffer[mouseEventBufferCount].x = xoffset;
-    mouseEventBuffer[mouseEventBufferCount].y = yoffset;
+    mouseEventBuffer[mouseEventBufferCount].x = (float)xoffset;
+    mouseEventBuffer[mouseEventBufferCount].y = (float)yoffset;
     mouseEventBufferCount++;
   }
 

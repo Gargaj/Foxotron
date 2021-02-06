@@ -45,6 +45,12 @@ if (APPLE)
 endif ()
 
 ##############################################################################
+# ASSIMP
+add_subdirectory(${CMAKE_SOURCE_DIR}/externals/assimp/)
+set(TRNT_PROJECT_INCLUDES ${TRNT_PROJECT_INCLUDES} ${CMAKE_SOURCE_DIR}/externals/assimp/include ${CMAKE_CURRENT_BINARY_DIR}/externals/assimp/include)
+set(TRNT_PROJECT_LIBS ${TRNT_PROJECT_LIBS} assimp)
+
+##############################################################################
 # GLFW
 # GLFW settings and project inclusion
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
