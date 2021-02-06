@@ -51,6 +51,12 @@ set(TRNT_PROJECT_INCLUDES ${TRNT_PROJECT_INCLUDES} ${CMAKE_SOURCE_DIR}/externals
 set(TRNT_PROJECT_LIBS ${TRNT_PROJECT_LIBS} assimp)
 
 ##############################################################################
+# GLM
+add_subdirectory(${CMAKE_SOURCE_DIR}/externals/glm/)
+set(TRNT_PROJECT_INCLUDES ${TRNT_PROJECT_INCLUDES} ${CMAKE_SOURCE_DIR}/externals/glm/glm)
+set(TRNT_PROJECT_LIBS ${TRNT_PROJECT_LIBS} glm)
+
+##############################################################################
 # GLFW
 # GLFW settings and project inclusion
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
