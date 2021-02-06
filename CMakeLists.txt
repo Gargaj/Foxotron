@@ -128,6 +128,25 @@ endif ()
 set(TRNT_PROJECT_INCLUDES ${TRNT_PROJECT_INCLUDES} ${CMAKE_SOURCE_DIR}/externals/imgui)
 set(TRNT_PROJECT_LIBS ${TRNT_PROJECT_LIBS} TRNT_ImGui)
 
+
+##############################################################################
+# IMGUI ADDONS
+file(GLOB IMGUIADDONS_INCLUDES
+  ${CMAKE_SOURCE_DIR}/externals/imgui-addons/FileBrowser/ImGuiFileBrowser.h
+)
+file(GLOB IMGUIADDONS_SRCS
+  ${CMAKE_SOURCE_DIR}/externals/imgui-addons/FileBrowser/ImGuiFileBrowser.cpp
+)
+add_library(TRNT_ImGuiAddons STATIC ${IMGUIADDONS_SRCS})
+target_include_directories(TRNT_ImGuiAddons PUBLIC 
+  ${CMAKE_SOURCE_DIR}/externals/imgui 
+)
+if (MSVC)
+  target_compile_options(TRNT_ImGuiAddons PUBLIC "$<$<CONFIG:Release>:/MT>")
+endif ()
+set(TRNT_PROJECT_INCLUDES ${TRNT_PROJECT_INCLUDES} ${CMAKE_SOURCE_DIR}/externals/imgui-addons/FileBrowser)
+set(TRNT_PROJECT_LIBS ${TRNT_PROJECT_LIBS} TRNT_ImGuiAddons)
+
 ##############################################################################
 # TURNTABLINATOR
 file(GLOB TRNT_PROJECT_SRCS

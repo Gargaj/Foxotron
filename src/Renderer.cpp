@@ -220,13 +220,23 @@ void StartFrame()
   glEnable( GL_DEPTH_TEST );
   glUseProgram( shaderProgram );
 
+  glBindVertexArray( vertexArray );
+
+  int offset = 0;
+  __SetupVertexArray( "in_pos", 3, offset );
+  __SetupVertexArray( "in_normal", 3, offset );
+  __SetupVertexArray( "in_tangent", 3, offset );
+  __SetupVertexArray( "in_binormal", 3, offset );
+  __SetupVertexArray( "in_texcoord", 2, offset );
 }
+
 void EndFrame()
 {
   mouseEventBufferCount = 0;
   glfwSwapBuffers( mWindow );
   glfwPollEvents();
 }
+
 bool WantsToQuit()
 {
   return glfwWindowShouldClose( mWindow ) || !run;
@@ -293,16 +303,6 @@ bool ReloadShaders( const char * szVertexShaderCode, int nVertexShaderCodeSize, 
   }
 
   shaderProgram = program;
-
-  glUseProgram( shaderProgram );
-  glBindVertexArray( vertexArray );
-
-  int offset = 0;
-  __SetupVertexArray( "in_pos", 3, offset );
-  __SetupVertexArray( "in_normal", 3, offset );
-  __SetupVertexArray( "in_tangent", 3, offset );
-  __SetupVertexArray( "in_binormal", 3, offset );
-  __SetupVertexArray( "in_texcoord", 2, offset );
 
   return true;
 }

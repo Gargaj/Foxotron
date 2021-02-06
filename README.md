@@ -4,6 +4,7 @@
 ### Libraries and other included software
 - Open Asset Import Library by the ASSIMP dev team (https://www.assimp.org)
 - Dear ImGui by Omar Cornut (http://www.dearimgui.com)
+- ImGui Addons by gallickgunner (https://github.com/gallickgunner/ImGui-Addons)
 - OpenGL Extension Wrangler Library by Nigel Stewart (http://glew.sourceforge.net)
 - STB Image library by Sean Barrett (https://nothings.org)
 - GLFW by whoever made GLFW (https://www.glfw.org/faq.html)

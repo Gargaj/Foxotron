@@ -8,6 +8,8 @@
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 
+#include "ImGuiFileBrowser.h"
+
 #include "ext.hpp"
 #include "gtx/rotate_vector.hpp"
 
@@ -54,12 +56,6 @@ bool load_shader( Shader * shader )
 
 int main( int argc, const char * argv[] )
 {
-  if ( argc < 2 )
-  {
-    printf( "needs cmdline for now" );
-    return -2;
-  }
-
   //////////////////////////////////////////////////////////////////////////
   // Init renderer
   RENDERER_SETTINGS settings;
@@ -84,9 +80,13 @@ int main( int argc, const char * argv[] )
   ImGui_ImplGlfw_InitForOpenGL( Renderer::mWindow, true );
   ImGui_ImplOpenGL3_Init();
 
-  if ( !Geometry::LoadMesh( argv[ 1 ] ) )
+  imgui_addons::ImGuiFileBrowser file_dialog;
+
+  //////////////////////////////////////////////////////////////////////////
+  // Bootstrap
+  if ( argc >= 2 )
   {
-    return -3;
+    Geometry::LoadMesh( argv[ 1 ] );
   }
 
   if ( !load_shader( &shaders[0] ) )
@@ -149,13 +149,14 @@ int main( int argc, const char * argv[] )
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
+    bool openFileDialog = false;
     if ( ImGui::BeginMainMenuBar() )
     {
       if ( ImGui::BeginMenu( "File" ) )
       {
         if ( ImGui::MenuItem( "Open model..." ) )
         {
-          // TODO: load model
+          openFileDialog = true;
         }
         ImGui::Separator();
         if ( ImGui::MenuItem( "Exit" ) )
@@ -183,6 +184,16 @@ int main( int argc, const char * argv[] )
       }
 
       ImGui::EndMainMenuBar();
+    }
+
+    if ( openFileDialog )
+    {
+      ImGui::OpenPopup( "Open model" );
+    }
+
+    if ( file_dialog.showFileDialog( "Open model", imgui_addons::ImGuiFileBrowser::DialogMode::OPEN, ImVec2( 700, 310 ), ".fbx,.dae,.blend,.gltf,.3ds" ) )
+    {
+      Geometry::LoadMesh( file_dialog.selected_path.c_str() );
     }
 
     ImGui::Render();

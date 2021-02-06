@@ -16,3 +16,6 @@
 [submodule "externals/glm"]
 	path = externals/glm
 	url = https://github.com/g-truc/glm.git
+[submodule "externals/imgui-addons"]
+	path = externals/imgui-addons
+	url = https://github.com/gallickgunner/ImGui-Addons.git
