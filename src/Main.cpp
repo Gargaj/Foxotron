@@ -1,6 +1,5 @@
 #include <stdio.h>
 
-#include "Renderer.h"
 #include "Geometry.h"
 
 #define IMGUI_IMPL_OPENGL_LOADER_GLEW
@@ -28,24 +27,28 @@ bool load_shader( Shader * shader )
 {
   char vertexShader[ 16 * 1024 ] = { 0 };
   FILE * fileVS = fopen( shader->vertexShaderPath, "rb" );
-  if ( fileVS )
+  if ( !fileVS )
   {
-    fread( vertexShader, 1, 16 * 1024, fileVS );
-    fclose( fileVS );
+    printf( "Vertex shader load failed: '%s'\n", shader->vertexShaderPath );
+    return false;
   }
+  fread( vertexShader, 1, 16 * 1024, fileVS );
+  fclose( fileVS );
 
   char fragmentShader[ 16 * 1024 ] = { 0 };
   FILE * fileFS = fopen( shader->fragmentShaderPath, "rb" );
-  if ( fileFS )
+  if ( !fileFS )
   {
-    fread( fragmentShader, 1, 16 * 1024, fileFS );
-    fclose( fileFS );
+    printf( "Fragment shader load failed: '%s'\n", shader->fragmentShaderPath );
+    return false;
   }
+  fread( fragmentShader, 1, 16 * 1024, fileFS );
+  fclose( fileFS );
 
   char error[ 4096 ];
   if ( !Renderer::ReloadShaders( vertexShader, (int) strlen( vertexShader ), fragmentShader, (int) strlen( fragmentShader ), error, 4096 ) )
   {
-    printf( "Shader load failed: %s\n", error );
+    printf( "Shader build failed: %s\n", error );
     return false;
   }
 
@@ -214,6 +217,32 @@ int main( int argc, const char * argv[] )
 
     for ( std::map<int, Geometry::Mesh>::iterator it = Geometry::mMeshes.begin(); it != Geometry::mMeshes.end(); it++ )
     {
+      Geometry::Material & material = Geometry::mMaterials[ it->second.mMaterialIndex ];
+      if ( material.textureDiffuse )
+      {
+        Renderer::SetShaderTexture( "tex_diffuse", material.textureDiffuse );
+      }
+      if ( material.textureNormals )
+      {
+        Renderer::SetShaderTexture( "tex_normals", material.textureNormals );
+      }
+      if ( material.textureSpecular )
+      {
+        Renderer::SetShaderTexture( "tex_specular", material.textureSpecular );
+      }
+      if ( material.textureAlbedo )
+      {
+        Renderer::SetShaderTexture( "tex_albedo", material.textureAlbedo );
+      }
+      if ( material.textureRoughness )
+      {
+        Renderer::SetShaderTexture( "tex_roughness", material.textureRoughness );
+      }
+      if ( material.textureMetallic )
+      {
+        Renderer::SetShaderTexture( "tex_metallic", material.textureMetallic );
+      }
+
       glm::mat4x4 worldMatrix( 1.0f );
       Renderer::SetShaderConstant( "mat_world", worldMatrix );
 

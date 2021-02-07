@@ -26,6 +26,23 @@ struct Vertex
 #pragma pack()
 
 std::map<int, Geometry::Mesh> Geometry::mMeshes;
+std::map<int, Geometry::Material> Geometry::mMaterials;
+
+Renderer::Texture * LoadTexture( const aiString & _path )
+{
+  std::string strPath( _path.data, _path.length );
+
+  if ( strPath.find( '\\' ) != -1 )
+  {
+    strPath = strPath.substr( strPath.find_last_of( '\\' ) + 1 );
+  }
+  if ( strPath.find( '/' ) != -1 )
+  {
+    strPath = strPath.substr( strPath.find_last_of( '/' ) + 1 );
+  }
+
+  return Renderer::CreateRGBA8TextureFromFile( strPath.c_str() );
+}
 
 bool Geometry::LoadMesh( const char * _path )
 {
@@ -133,13 +150,72 @@ bool Geometry::LoadMesh( const char * _path )
     mMeshes.insert( { i, mesh } );
   }
 
-  // TODO: load materials
+  for ( int i = 0; i < scene->mNumMaterials; i++ )
+  {
+    Material material;
+
+    aiString str;
+    if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_DIFFUSE, 0 ), &str ) == AI_SUCCESS )
+    {
+      material.textureDiffuse = LoadTexture( str );
+    }
+    if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_NORMALS, 0 ), &str ) == AI_SUCCESS )
+    {
+      material.textureNormals = LoadTexture( str );
+    }
+    if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_SPECULAR, 0 ), &str ) == AI_SUCCESS )
+    {
+      material.textureSpecular = LoadTexture( str );
+    }
+    if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_BASE_COLOR, 0 ), &str ) == AI_SUCCESS )
+    {
+      material.textureAlbedo = LoadTexture( str );
+    }
+    if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_DIFFUSE_ROUGHNESS, 0 ), &str ) == AI_SUCCESS )
+    {
+      material.textureRoughness = LoadTexture( str );
+    }
+    if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_METALNESS, 0 ), &str ) == AI_SUCCESS )
+    {
+      material.textureMetallic = LoadTexture( str );
+    }
+
+    mMaterials.insert( { i, material } );
+  }
+
 
   return true;
 }
 
 void Geometry::UnloadMesh()
 {
+  for ( std::map<int, Material>::iterator it = mMaterials.begin(); it != mMaterials.end(); it++ )
+  {
+    if ( it->second.textureDiffuse )
+    {
+      Renderer::ReleaseTexture( it->second.textureDiffuse );
+    }
+    if ( it->second.textureNormals )
+    {
+      Renderer::ReleaseTexture( it->second.textureNormals );
+    }
+    if ( it->second.textureSpecular )
+    {
+      Renderer::ReleaseTexture( it->second.textureSpecular );
+    }
+    if ( it->second.textureAlbedo )
+    {
+      Renderer::ReleaseTexture( it->second.textureAlbedo );
+    }
+    if ( it->second.textureRoughness )
+    {
+      Renderer::ReleaseTexture( it->second.textureRoughness );
+    }
+    if ( it->second.textureMetallic )
+    {
+      Renderer::ReleaseTexture( it->second.textureMetallic );
+    }
+  }
   for ( std::map<int, Mesh>::iterator it = mMeshes.begin(); it != mMeshes.end(); it++ )
   {
     glDeleteBuffers( 1, &it->second.mIndexBufferObject );
