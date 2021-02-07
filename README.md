@@ -1,5 +1,7 @@
 # Foxotron
 
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/Gargaj/Foxotron/build-on-push?logo=github)](https://github.com/Gargaj/Foxotron/actions)
+
 ASSIMP based general purpose model viewer ("turntable") created for the Revision 2021 3D Graphics Competition
 
 ### Libraries and other included software
@@ -13,6 +15,3 @@ ASSIMP based general purpose model viewer ("turntable") created for the Revision
 These software are available under their respective licenses.
 
 The remainder of this project code was written by Gargaj / Conspiracy and is public domain.
-
-## Contact / discussion forum
-If you have anything to say, do it at https://www.pouet.net/topic.php?which=9881 or [![Join the chat at https://gitter.im/Gargaj/Bonzomatic](https://badges.gitter.im/Gargaj/Bonzomatic.svg)](https://gitter.im/Gargaj/Bonzomatic?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
