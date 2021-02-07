@@ -112,79 +112,10 @@ int main( int argc, const char * argv[] )
   float lightPitch = 0.0f;
   float mouseClickPosX = 0.0f;
   float mouseClickPosY = 0.0f;
+  glm::vec4 clearColor( 0.08f, 0.18f, 0.18f, 1.0f );
   while ( !Renderer::WantsToQuit() && !appWantsToQuit )
   {
-    //////////////////////////////////////////////////////////////////////////
-    // Mouse rotation
-
-    for ( int i = 0; i < Renderer::mouseEventBufferCount; i++ )
-    {
-      Renderer::MouseEvent & mouseEvent = Renderer::mouseEventBuffer[ i ];
-      switch ( mouseEvent.eventType )
-      {
-        case Renderer::MOUSEEVENTTYPE_MOVE:
-          {
-            const float rotationSpeed = 130.0f;
-            if ( movingCamera )
-            {
-              cameraYaw -= ( mouseEvent.x - mouseClickPosX ) / rotationSpeed;
-              cameraPitch += ( mouseEvent.y - mouseClickPosY ) / rotationSpeed;
-
-              // Clamp to avoid gimbal lock
-              cameraPitch = std::min( cameraPitch, 1.5f ); 
-              cameraPitch = std::max( cameraPitch, -1.5f );
-            }
-            if ( movingLight )
-            {
-              // Light is a direction so it moves "backwards"
-              lightYaw += ( mouseEvent.x - mouseClickPosX ) / rotationSpeed;
-              lightPitch -= ( mouseEvent.y - mouseClickPosY ) / rotationSpeed;
-
-              // Clamp to avoid gimbal lock
-              lightPitch = std::min( lightPitch, 1.5f );
-              lightPitch = std::max( lightPitch, -1.5f );
-            }
-            mouseClickPosX = mouseEvent.x;
-            mouseClickPosY = mouseEvent.y;
-          }
-          break;
-        case Renderer::MOUSEEVENTTYPE_DOWN:
-          {
-            if ( mouseEvent.button == Renderer::MOUSEBUTTON_LEFT )
-            {
-              movingCamera = true;
-            }
-            else if ( mouseEvent.button == Renderer::MOUSEBUTTON_RIGHT )
-            {
-              movingLight = true;
-            }
-            mouseClickPosX = mouseEvent.x;
-            mouseClickPosY = mouseEvent.y;
-          }
-          break;
-        case Renderer::MOUSEEVENTTYPE_UP:
-          {
-            if ( mouseEvent.button == Renderer::MOUSEBUTTON_LEFT )
-            {
-              movingCamera = false;
-            }
-            else if ( mouseEvent.button == Renderer::MOUSEBUTTON_RIGHT )
-            {
-              movingLight = false;
-            }
-          }
-          break;
-        case Renderer::MOUSEEVENTTYPE_SCROLL:
-          {
-            const float aspect = 1.1f;
-            cameraDistance *= mouseEvent.y < 0 ? aspect : 1 / aspect;
-          }
-          break;
-      }
-    }
-    Renderer::mouseEventBufferCount = 0;
-
-    Renderer::StartFrame();
+    Renderer::StartFrame( clearColor );
 
     //////////////////////////////////////////////////////////////////////////
     // ImGui windows etc.
@@ -208,9 +139,11 @@ int main( int argc, const char * argv[] )
         }
         ImGui::EndMenu();
       }
-      if ( ImGui::BeginMenu( "Camera" ) )
+      if ( ImGui::BeginMenu( "View" ) )
       {
         ImGui::MenuItem( "Enable idle camera", NULL, &automaticCamera );
+        ImGui::Separator();
+        ImGui::ColorEdit4( "Background", (float *) &clearColor, ImGuiColorEditFlags_AlphaPreviewHalf );
         ImGui::EndMenu();
       }
       if ( ImGui::BeginMenu( "Shaders" ) )
@@ -240,6 +173,79 @@ int main( int argc, const char * argv[] )
     }
 
     ImGui::Render();
+
+    //////////////////////////////////////////////////////////////////////////
+    // Mouse rotation
+
+    if ( !io.WantCaptureMouse )
+    {
+      for ( int i = 0; i < Renderer::mouseEventBufferCount; i++ )
+      {
+        Renderer::MouseEvent & mouseEvent = Renderer::mouseEventBuffer[ i ];
+        switch ( mouseEvent.eventType )
+        {
+          case Renderer::MOUSEEVENTTYPE_MOVE:
+            {
+              const float rotationSpeed = 130.0f;
+              if ( movingCamera )
+              {
+                cameraYaw -= ( mouseEvent.x - mouseClickPosX ) / rotationSpeed;
+                cameraPitch += ( mouseEvent.y - mouseClickPosY ) / rotationSpeed;
+
+                // Clamp to avoid gimbal lock
+                cameraPitch = std::min( cameraPitch, 1.5f );
+                cameraPitch = std::max( cameraPitch, -1.5f );
+              }
+              if ( movingLight )
+              {
+                // Light is a direction so it moves "backwards"
+                lightYaw += ( mouseEvent.x - mouseClickPosX ) / rotationSpeed;
+                lightPitch -= ( mouseEvent.y - mouseClickPosY ) / rotationSpeed;
+
+                // Clamp to avoid gimbal lock
+                lightPitch = std::min( lightPitch, 1.5f );
+                lightPitch = std::max( lightPitch, -1.5f );
+              }
+              mouseClickPosX = mouseEvent.x;
+              mouseClickPosY = mouseEvent.y;
+            }
+            break;
+          case Renderer::MOUSEEVENTTYPE_DOWN:
+            {
+              if ( mouseEvent.button == Renderer::MOUSEBUTTON_LEFT )
+              {
+                movingCamera = true;
+              }
+              else if ( mouseEvent.button == Renderer::MOUSEBUTTON_RIGHT )
+              {
+                movingLight = true;
+              }
+              mouseClickPosX = mouseEvent.x;
+              mouseClickPosY = mouseEvent.y;
+            }
+            break;
+          case Renderer::MOUSEEVENTTYPE_UP:
+            {
+              if ( mouseEvent.button == Renderer::MOUSEBUTTON_LEFT )
+              {
+                movingCamera = false;
+              }
+              else if ( mouseEvent.button == Renderer::MOUSEBUTTON_RIGHT )
+              {
+                movingLight = false;
+              }
+            }
+            break;
+          case Renderer::MOUSEEVENTTYPE_SCROLL:
+            {
+              const float aspect = 1.1f;
+              cameraDistance *= mouseEvent.y < 0 ? aspect : 1 / aspect;
+            }
+            break;
+        }
+      }
+    }
+    Renderer::mouseEventBufferCount = 0;
 
     //////////////////////////////////////////////////////////////////////////
     // Mesh render

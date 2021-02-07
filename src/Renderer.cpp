@@ -212,9 +212,9 @@ void __SetupVertexArray( const char * name, int sizeInFloats, int & offsetInFloa
   offsetInFloats += sizeInFloats;
 }
 
-void StartFrame()
+void StartFrame( glm::vec4 & clearColor )
 {
-  glClearColor( 0.08f, 0.18f, 0.18f, 1.0f );
+  glClearColor( clearColor.r, clearColor.g, clearColor.b, clearColor.a );
   glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
 
   glEnable( GL_DEPTH_TEST );

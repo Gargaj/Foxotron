@@ -29,7 +29,7 @@ extern GLFWwindow * mWindow;
 
 bool Open( RENDERER_SETTINGS * settings );
 
-void StartFrame();
+void StartFrame( glm::vec4 & clearColor );
 void EndFrame();
 bool WantsToQuit();
 
