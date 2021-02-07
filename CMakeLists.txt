@@ -49,8 +49,10 @@ endif ()
 add_subdirectory(${CMAKE_SOURCE_DIR}/externals/assimp/)
 set(FXTRN_PROJECT_INCLUDES ${FXTRN_PROJECT_INCLUDES} ${CMAKE_SOURCE_DIR}/externals/assimp/include ${CMAKE_CURRENT_BINARY_DIR}/externals/assimp/include)
 set(FXTRN_PROJECT_LIBS ${FXTRN_PROJECT_LIBS} assimp)
-target_compile_options(assimp PUBLIC "$<$<CONFIG:Release>:/MT>")
-target_compile_options(zlibstatic PUBLIC "$<$<CONFIG:Release>:/MT>")
+if (MSVC)
+  target_compile_options(assimp PUBLIC "$<$<CONFIG:Release>:/MT>")
+  target_compile_options(zlibstatic PUBLIC "$<$<CONFIG:Release>:/MT>")
+endif ()
 
 ##############################################################################
 # GLM
