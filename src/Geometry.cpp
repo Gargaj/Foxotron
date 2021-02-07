@@ -1,7 +1,7 @@
 #include "Geometry.h"
 
 #include <assimp/scene.h>
-#include <assimp/postProcess.h>
+#include <assimp/postprocess.h>
 #include <assimp/Importer.hpp>
 #include <assimp/IOStream.hpp>
 #include <assimp/IOSystem.hpp>
