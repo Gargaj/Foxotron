@@ -28,25 +28,50 @@ struct Vertex
 std::map<int, Geometry::Mesh> Geometry::mMeshes;
 std::map<int, Geometry::Material> Geometry::mMaterials;
 
-Renderer::Texture * LoadTexture( const aiString & _path )
+Renderer::Texture * LoadTexture( const aiString & _path, const std::string & _folder )
 {
-  std::string strPath( _path.data, _path.length );
+  std::string filename( _path.data, _path.length );
 
-  if ( strPath.find( '\\' ) != -1 )
+  if ( filename.find( '\\' ) != -1 )
   {
-    strPath = strPath.substr( strPath.find_last_of( '\\' ) + 1 );
+    filename = filename.substr( filename.find_last_of( '\\' ) + 1 );
   }
-  if ( strPath.find( '/' ) != -1 )
+  if ( filename.find( '/' ) != -1 )
   {
-    strPath = strPath.substr( strPath.find_last_of( '/' ) + 1 );
+    filename = filename.substr( filename.find_last_of( '/' ) + 1 );
   }
 
-  return Renderer::CreateRGBA8TextureFromFile( strPath.c_str() );
+  Renderer::Texture * texture = Renderer::CreateRGBA8TextureFromFile( filename.c_str() );
+  if ( texture )
+  {
+    return texture;
+  }
+
+  filename = _folder + filename;
+
+  texture = Renderer::CreateRGBA8TextureFromFile( filename.c_str() );
+  if ( texture )
+  {
+    return texture;
+  }
+
+  return NULL;
 }
 
 bool Geometry::LoadMesh( const char * _path )
 {
   UnloadMesh();
+
+  std::string path = _path;
+  std::string folder;
+  if ( path.find( '\\' ) != -1 )
+  {
+    folder = path.substr( 0, path.find_last_of( '\\' ) + 1 );
+  }
+  if ( path.find( '/' ) != -1 )
+  {
+    folder = path.substr( 0, path.find_last_of( '/' ) + 1 );
+  }
 
   mImporter.SetPropertyInteger( AI_CONFIG_PP_SBBC_MAX_BONES, 24 );
 
@@ -129,21 +154,20 @@ bool Geometry::LoadMesh( const char * _path )
 
     mesh.mTriangleCount = sceneMesh->mNumFaces;
     
-    unsigned int * p = new unsigned int[ sceneMesh->mNumFaces * 3 ];
+    unsigned int * faces = new unsigned int[ sceneMesh->mNumFaces * 3 ];
 
     for ( int j = 0; j < sceneMesh->mNumFaces; j++ )
     {
-      aiFace * faces = sceneMesh->mFaces;
-      p[ j * 3 + 0 ] = sceneMesh->mFaces[ j ].mIndices[ 0 ];
-      p[ j * 3 + 1 ] = sceneMesh->mFaces[ j ].mIndices[ 1 ];
-      p[ j * 3 + 2 ] = sceneMesh->mFaces[ j ].mIndices[ 2 ];
+      faces[ j * 3 + 0 ] = sceneMesh->mFaces[ j ].mIndices[ 0 ];
+      faces[ j * 3 + 1 ] = sceneMesh->mFaces[ j ].mIndices[ 1 ];
+      faces[ j * 3 + 2 ] = sceneMesh->mFaces[ j ].mIndices[ 2 ];
     }
 
     glGenBuffers( 1, &mesh.mIndexBufferObject );
     glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, mesh.mIndexBufferObject );
-    glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * sceneMesh->mNumFaces * 3, p, GL_STATIC_DRAW );
+    glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * sceneMesh->mNumFaces * 3, faces, GL_STATIC_DRAW );
 
-    delete[] p;
+    delete[] faces;
 
     mesh.mMaterialIndex = sceneMesh->mMaterialIndex;
 
@@ -157,27 +181,27 @@ bool Geometry::LoadMesh( const char * _path )
     aiString str;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_DIFFUSE, 0 ), &str ) == AI_SUCCESS )
     {
-      material.textureDiffuse = LoadTexture( str );
+      material.textureDiffuse = LoadTexture( str, folder );
     }
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_NORMALS, 0 ), &str ) == AI_SUCCESS )
     {
-      material.textureNormals = LoadTexture( str );
+      material.textureNormals = LoadTexture( str, folder );
     }
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_SPECULAR, 0 ), &str ) == AI_SUCCESS )
     {
-      material.textureSpecular = LoadTexture( str );
+      material.textureSpecular = LoadTexture( str, folder );
     }
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_BASE_COLOR, 0 ), &str ) == AI_SUCCESS )
     {
-      material.textureAlbedo = LoadTexture( str );
+      material.textureAlbedo = LoadTexture( str, folder );
     }
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_DIFFUSE_ROUGHNESS, 0 ), &str ) == AI_SUCCESS )
     {
-      material.textureRoughness = LoadTexture( str );
+      material.textureRoughness = LoadTexture( str, folder );
     }
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_METALNESS, 0 ), &str ) == AI_SUCCESS )
     {
-      material.textureMetallic = LoadTexture( str );
+      material.textureMetallic = LoadTexture( str, folder );
     }
 
     mMaterials.insert( { i, material } );

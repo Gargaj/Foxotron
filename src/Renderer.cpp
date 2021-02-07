@@ -219,7 +219,10 @@ void StartFrame( glm::vec4 & clearColor )
 
   glEnable( GL_DEPTH_TEST );
   glUseProgram( shaderProgram );
+}
 
+void RebindVertexArray()
+{
   glBindVertexArray( vertexArray );
 
   int offset = 0;

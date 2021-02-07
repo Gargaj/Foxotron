@@ -334,8 +334,9 @@ int main( int argc, const char * argv[] )
       glm::mat4x4 worldMatrix( 1.0f );
       Renderer::SetShaderConstant( "mat_world", worldMatrix );
 
-      glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, it->second.mIndexBufferObject );
       glBindBuffer( GL_ARRAY_BUFFER, it->second.mVertexBufferObject );
+      glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, it->second.mIndexBufferObject );
+      Renderer::RebindVertexArray();
       glDrawElements( GL_TRIANGLES, it->second.mTriangleCount * 3, GL_UNSIGNED_INT, NULL );
     }
 

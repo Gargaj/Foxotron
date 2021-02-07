@@ -30,6 +30,7 @@ extern GLFWwindow * mWindow;
 bool Open( RENDERER_SETTINGS * settings );
 
 void StartFrame( glm::vec4 & clearColor );
+void RebindVertexArray();
 void EndFrame();
 bool WantsToQuit();
 
