@@ -124,6 +124,7 @@ int main( int argc, const char * argv[] )
     ImGui::NewFrame();
 
     bool openFileDialog = false;
+    static bool showModelInfo = false;
     if ( ImGui::BeginMainMenuBar() )
     {
       if ( ImGui::BeginMenu( "File" ) )
@@ -142,6 +143,7 @@ int main( int argc, const char * argv[] )
       if ( ImGui::BeginMenu( "View" ) )
       {
         ImGui::MenuItem( "Enable idle camera", NULL, &automaticCamera );
+        ImGui::MenuItem( "Show model info", NULL, &showModelInfo );
         ImGui::Separator();
         ImGui::ColorEdit4( "Background", (float *) &clearColor, ImGuiColorEditFlags_AlphaPreviewHalf );
         ImGui::EndMenu();
@@ -170,6 +172,33 @@ int main( int argc, const char * argv[] )
     if ( file_dialog.showFileDialog( "Open model", imgui_addons::ImGuiFileBrowser::DialogMode::OPEN, ImVec2( 700, 310 ), ".fbx,.dae,.blend,.gltf,.3ds" ) )
     {
       Geometry::LoadMesh( file_dialog.selected_path.c_str() );
+    }
+
+    if ( showModelInfo )
+    {
+      ImGui::Begin( "Model info", &showModelInfo );
+      ImGui::BeginTabBar( "model" );
+      if ( ImGui::BeginTabItem( "Summary" ) )
+      {
+        int triCount = 0;
+        for ( std::map<int, Geometry::Mesh>::iterator it = Geometry::mMeshes.begin(); it != Geometry::mMeshes.end(); it++ )
+        {
+          triCount += it->second.mTriangleCount;
+        }
+
+        ImGui::Text( "Triangle count: %d", triCount );
+        ImGui::Text( "Mesh count: %d", Geometry::mMeshes.size() );
+
+        ImGui::EndTabItem();
+      }
+      if ( ImGui::BeginTabItem( "Textures / Materials" ) )
+      {
+        ImGui::Text( "Material count: %d", Geometry::mMaterials.size() );
+
+        ImGui::EndTabItem();
+      }
+      ImGui::EndTabBar();
+      ImGui::End();
     }
 
     ImGui::Render();
@@ -215,6 +244,7 @@ int main( int argc, const char * argv[] )
               if ( mouseEvent.button == Renderer::MOUSEBUTTON_LEFT )
               {
                 movingCamera = true;
+                automaticCamera = false;
               }
               else if ( mouseEvent.button == Renderer::MOUSEBUTTON_RIGHT )
               {
@@ -249,6 +279,11 @@ int main( int argc, const char * argv[] )
 
     //////////////////////////////////////////////////////////////////////////
     // Mesh render
+
+    if ( automaticCamera )
+    {
+      cameraYaw += io.DeltaTime * 0.3f;
+    }
 
     float verticalFovInRadian = 0.5f;
     projectionMatrix = glm::perspective( verticalFovInRadian, settings.nWidth / (float) settings.nHeight, 0.01f, cameraDistance * 2.0f );
