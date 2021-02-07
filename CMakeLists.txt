@@ -45,6 +45,10 @@ if (APPLE)
 endif ()
 
 ##############################################################################
+# Global settings
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
+##############################################################################
 # ASSIMP
 add_subdirectory(${CMAKE_SOURCE_DIR}/externals/assimp/)
 set(FXTRN_PROJECT_INCLUDES ${FXTRN_PROJECT_INCLUDES} ${CMAKE_SOURCE_DIR}/externals/assimp/include ${CMAKE_CURRENT_BINARY_DIR}/externals/assimp/include)
@@ -63,7 +67,6 @@ set(FXTRN_PROJECT_LIBS ${FXTRN_PROJECT_LIBS} glm)
 ##############################################################################
 # GLFW
 # GLFW settings and project inclusion
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
