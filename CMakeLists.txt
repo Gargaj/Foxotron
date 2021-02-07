@@ -209,7 +209,7 @@ endif ()
 add_executable(${FXTRN_EXE_NAME} ${FXTRN_PROJECT_SRCS})
 # Set compiler specific flags
 if (APPLE)
-  set_target_properties(${FXTRN_EXE_NAME} PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/data/macosx/MacOSXBundleInfo.plist.in)
+#  set_target_properties(${FXTRN_EXE_NAME} PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/data/macosx/MacOSXBundleInfo.plist.in)
 elseif (UNIX AND (NOT APPLE))
   target_compile_options(${FXTRN_EXE_NAME} PUBLIC -std=c++11)
 elseif (WIN32)

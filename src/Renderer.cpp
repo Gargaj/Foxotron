@@ -342,7 +342,7 @@ void SetShaderConstant( const char * szConstName, glm::mat4x4 & matrix )
   GLint location = glGetUniformLocation( shaderProgram, szConstName );
   if ( location != -1 )
   {
-    glProgramUniformMatrix4fv( shaderProgram, location, 1, FALSE, (float*)&matrix );
+    glProgramUniformMatrix4fv( shaderProgram, location, 1, 0, (float*)&matrix );
   }
 }
 
