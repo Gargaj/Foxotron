@@ -1,5 +1,6 @@
-# Turntablinator
+# Foxotron
 
+ASSIMP based general purpose model viewer ("turntable") created for the Revision 2021 3D Graphics Competition
 
 ### Libraries and other included software
 - Open Asset Import Library by the ASSIMP dev team (https://www.assimp.org)
