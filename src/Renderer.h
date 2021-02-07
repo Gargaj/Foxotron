@@ -38,6 +38,7 @@ void RenderFullscreenQuad();
 bool ReloadShaders( const char * szVertexShaderCode, int nVertexShaderCodeSize, const char * szFragmentShaderCode, int nFragmentShaderCodeSize, char * szErrorBuffer, int nErrorBufferSize );
 void SetShaderConstant( const char * szConstName, float x );
 void SetShaderConstant( const char * szConstName, float x, float y );
+void SetShaderConstant( const char * szConstName, glm::vec3 & vector );
 void SetShaderConstant( const char * szConstName, glm::mat4x4 & matrix );
 
 void Close();

@@ -325,6 +325,15 @@ void SetShaderConstant( const char * szConstName, float x, float y )
   }
 }
 
+void SetShaderConstant( const char * szConstName, glm::vec3 & vector )
+{
+  GLint location = glGetUniformLocation( shaderProgram, szConstName );
+  if ( location != -1 )
+  {
+    glProgramUniform3f( shaderProgram, location, vector.x, vector.y, vector.z );
+  }
+}
+
 void SetShaderConstant( const char * szConstName, glm::mat4x4 & matrix )
 {
   GLint location = glGetUniformLocation( shaderProgram, szConstName );

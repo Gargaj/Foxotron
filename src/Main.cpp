@@ -105,8 +105,11 @@ int main( int argc, const char * argv[] )
   glm::mat4x4 projectionMatrix;
   float cameraDistance = 500.0f;
   bool movingCamera = false;
+  bool movingLight = false;
   float cameraYaw = 0.0f;
   float cameraPitch = 0.0f;
+  float lightYaw = 0.0f;
+  float lightPitch = 0.0f;
   float mouseClickPosX = 0.0f;
   float mouseClickPosY = 0.0f;
   while ( !Renderer::WantsToQuit() && !appWantsToQuit )
@@ -116,29 +119,66 @@ int main( int argc, const char * argv[] )
 
     for ( int i = 0; i < Renderer::mouseEventBufferCount; i++ )
     {
-      switch ( Renderer::mouseEventBuffer[ i ].eventType )
+      Renderer::MouseEvent & mouseEvent = Renderer::mouseEventBuffer[ i ];
+      switch ( mouseEvent.eventType )
       {
         case Renderer::MOUSEEVENTTYPE_MOVE:
-          if ( movingCamera )
           {
             const float rotationSpeed = 130.0f;
-            cameraYaw -= (Renderer::mouseEventBuffer[ i ].x - mouseClickPosX) / rotationSpeed;
-            cameraPitch += (Renderer::mouseEventBuffer[ i ].y - mouseClickPosY) / rotationSpeed;
-            mouseClickPosX = Renderer::mouseEventBuffer[ i ].x;
-            mouseClickPosY = Renderer::mouseEventBuffer[ i ].y;
+            if ( movingCamera )
+            {
+              cameraYaw -= ( mouseEvent.x - mouseClickPosX ) / rotationSpeed;
+              cameraPitch += ( mouseEvent.y - mouseClickPosY ) / rotationSpeed;
+
+              // Clamp to avoid gimbal lock
+              cameraPitch = std::min( cameraPitch, 1.5f ); 
+              cameraPitch = std::max( cameraPitch, -1.5f );
+            }
+            if ( movingLight )
+            {
+              // Light is a direction so it moves "backwards"
+              lightYaw += ( mouseEvent.x - mouseClickPosX ) / rotationSpeed;
+              lightPitch -= ( mouseEvent.y - mouseClickPosY ) / rotationSpeed;
+
+              // Clamp to avoid gimbal lock
+              lightPitch = std::min( lightPitch, 1.5f );
+              lightPitch = std::max( lightPitch, -1.5f );
+            }
+            mouseClickPosX = mouseEvent.x;
+            mouseClickPosY = mouseEvent.y;
           }
           break;
         case Renderer::MOUSEEVENTTYPE_DOWN:
-          movingCamera = true;
-          mouseClickPosX = Renderer::mouseEventBuffer[ i ].x;
-          mouseClickPosY = Renderer::mouseEventBuffer[ i ].y;
+          {
+            if ( mouseEvent.button == Renderer::MOUSEBUTTON_LEFT )
+            {
+              movingCamera = true;
+            }
+            else if ( mouseEvent.button == Renderer::MOUSEBUTTON_RIGHT )
+            {
+              movingLight = true;
+            }
+            mouseClickPosX = mouseEvent.x;
+            mouseClickPosY = mouseEvent.y;
+          }
           break;
         case Renderer::MOUSEEVENTTYPE_UP:
-          movingCamera = false;
+          {
+            if ( mouseEvent.button == Renderer::MOUSEBUTTON_LEFT )
+            {
+              movingCamera = false;
+            }
+            else if ( mouseEvent.button == Renderer::MOUSEBUTTON_RIGHT )
+            {
+              movingLight = false;
+            }
+          }
           break;
         case Renderer::MOUSEEVENTTYPE_SCROLL:
-          const float aspect = 1.1f;
-          cameraDistance *= Renderer::mouseEventBuffer[ i ].y < 0 ? aspect : 1 / aspect;
+          {
+            const float aspect = 1.1f;
+            cameraDistance *= mouseEvent.y < 0 ? aspect : 1 / aspect;
+          }
           break;
       }
     }
@@ -211,8 +251,15 @@ int main( int argc, const char * argv[] )
     glm::vec3 cameraPosition( 0.0f, 0.0f, -1.0f );
     cameraPosition = glm::rotateX( cameraPosition, cameraPitch );
     cameraPosition = glm::rotateY( cameraPosition, cameraYaw );
+    cameraPosition *= cameraDistance;
+    Renderer::SetShaderConstant( "camera_position", cameraPosition );
 
-    viewMatrix = glm::lookAtRH( cameraPosition * cameraDistance, glm::vec3( 0.0f, 0.0f, 0.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
+    glm::vec3 lightDirection( 0.0f, 0.0f, -1.0f );
+    lightDirection = glm::rotateX( lightDirection, lightPitch );
+    lightDirection = glm::rotateY( lightDirection, lightYaw );
+    Renderer::SetShaderConstant( "light_direction", lightDirection );
+
+    viewMatrix = glm::lookAtRH( cameraPosition, glm::vec3( 0.0f, 0.0f, 0.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
     Renderer::SetShaderConstant( "mat_view", viewMatrix );
 
     for ( std::map<int, Geometry::Mesh>::iterator it = Geometry::mMeshes.begin(); it != Geometry::mMeshes.end(); it++ )
