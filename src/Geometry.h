@@ -1,5 +1,6 @@
 #include <map>
 #include <vector>
+#include <string>
 
 #include "Renderer.h"
 
@@ -38,6 +39,7 @@ struct Material
 
 bool LoadMesh( const char * _path );
 void UnloadMesh();
+std::string GetSupportedExtensions();
 
 extern std::map<int, Node> mNodes;
 extern std::map<int, Mesh> mMeshes;

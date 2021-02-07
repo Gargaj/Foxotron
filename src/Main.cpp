@@ -114,6 +114,7 @@ int main( int argc, const char * argv[] )
   float mouseClickPosY = 0.0f;
   glm::vec4 clearColor( 0.08f, 0.18f, 0.18f, 1.0f );
   glm::mat4x4 matrices[ 64 ];
+  std::string supportedExtensions = Geometry::GetSupportedExtensions();
   while ( !Renderer::WantsToQuit() && !appWantsToQuit )
   {
     Renderer::StartFrame( clearColor );
@@ -170,7 +171,7 @@ int main( int argc, const char * argv[] )
       ImGui::OpenPopup( "Open model" );
     }
 
-    if ( file_dialog.showFileDialog( "Open model", imgui_addons::ImGuiFileBrowser::DialogMode::OPEN, ImVec2( 700, 310 ), ".fbx,.dae,.blend,.gltf,.3ds" ) )
+    if ( file_dialog.showFileDialog( "Open model", imgui_addons::ImGuiFileBrowser::DialogMode::OPEN, ImVec2( 700, 310 ), supportedExtensions.c_str() ) )
     {
       Geometry::LoadMesh( file_dialog.selected_path.c_str() );
     }

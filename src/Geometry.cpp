@@ -277,3 +277,24 @@ void Geometry::UnloadMesh()
   mImporter.FreeScene();
 }
 
+std::string Geometry::GetSupportedExtensions()
+{
+  std::string out;
+  mImporter.GetExtensionList( out );
+
+  for ( int i = 0; i < out.length(); i++ )
+  {
+    if ( out[ i ] == '*' )
+    {
+      out = out.substr( 0, i ) + out.substr( i + 1 );
+      i--;
+    }
+    else if ( out[ i ] == ';' )
+    {
+      out[ i ] = ',';
+    }
+  }
+
+  return out;
+}
+
