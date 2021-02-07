@@ -113,6 +113,7 @@ int main( int argc, const char * argv[] )
   float mouseClickPosX = 0.0f;
   float mouseClickPosY = 0.0f;
   glm::vec4 clearColor( 0.08f, 0.18f, 0.18f, 1.0f );
+  glm::mat4x4 matrices[ 64 ];
   while ( !Renderer::WantsToQuit() && !appWantsToQuit )
   {
     Renderer::StartFrame( clearColor );
@@ -303,41 +304,58 @@ int main( int argc, const char * argv[] )
     viewMatrix = glm::lookAtRH( cameraPosition, glm::vec3( 0.0f, 0.0f, 0.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
     Renderer::SetShaderConstant( "mat_view", viewMatrix );
 
-    for ( std::map<int, Geometry::Mesh>::iterator it = Geometry::mMeshes.begin(); it != Geometry::mMeshes.end(); it++ )
+    for ( std::map<int, Geometry::Node>::iterator it = Geometry::mNodes.begin(); it != Geometry::mNodes.end(); it++ )
     {
-      Geometry::Material & material = Geometry::mMaterials[ it->second.mMaterialIndex ];
-      if ( material.textureDiffuse )
+      const Geometry::Node & node = it->second;
+
+      glm::mat4x4 matParent, matPrevParent;
+      if ( node.nParentID == -1 )
       {
-        Renderer::SetShaderTexture( "tex_diffuse", material.textureDiffuse );
+        matParent = glm::mat4x4( 1.0f );
       }
-      if ( material.textureNormals )
+      else
       {
-        Renderer::SetShaderTexture( "tex_normals", material.textureNormals );
-      }
-      if ( material.textureSpecular )
-      {
-        Renderer::SetShaderTexture( "tex_specular", material.textureSpecular );
-      }
-      if ( material.textureAlbedo )
-      {
-        Renderer::SetShaderTexture( "tex_albedo", material.textureAlbedo );
-      }
-      if ( material.textureRoughness )
-      {
-        Renderer::SetShaderTexture( "tex_roughness", material.textureRoughness );
-      }
-      if ( material.textureMetallic )
-      {
-        Renderer::SetShaderTexture( "tex_metallic", material.textureMetallic );
+        matParent = matrices[ node.nParentID ];
       }
 
-      glm::mat4x4 worldMatrix( 1.0f );
-      Renderer::SetShaderConstant( "mat_world", worldMatrix );
+      matrices[ node.nID ] = matParent * node.matTransformation;
+      Renderer::SetShaderConstant( "mat_world", matrices[ node.nID ] );
 
-      glBindBuffer( GL_ARRAY_BUFFER, it->second.mVertexBufferObject );
-      glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, it->second.mIndexBufferObject );
-      Renderer::RebindVertexArray();
-      glDrawElements( GL_TRIANGLES, it->second.mTriangleCount * 3, GL_UNSIGNED_INT, NULL );
+      for ( int i=0; i<it->second.mMeshes.size(); i++ )
+      {
+        const Geometry::Mesh & mesh = Geometry::mMeshes[ it->second.mMeshes[ i ] ];
+        const Geometry::Material & material = Geometry::mMaterials[ mesh.mMaterialIndex ];
+        if ( material.textureDiffuse )
+        {
+          Renderer::SetShaderTexture( "tex_diffuse", material.textureDiffuse );
+        }
+        if ( material.textureNormals )
+        {
+          Renderer::SetShaderTexture( "tex_normals", material.textureNormals );
+        }
+        if ( material.textureSpecular )
+        {
+          Renderer::SetShaderTexture( "tex_specular", material.textureSpecular );
+        }
+        if ( material.textureAlbedo )
+        {
+          Renderer::SetShaderTexture( "tex_albedo", material.textureAlbedo );
+        }
+        if ( material.textureRoughness )
+        {
+          Renderer::SetShaderTexture( "tex_roughness", material.textureRoughness );
+        }
+        if ( material.textureMetallic )
+        {
+          Renderer::SetShaderTexture( "tex_metallic", material.textureMetallic );
+        }
+
+
+        glBindBuffer( GL_ARRAY_BUFFER, mesh.mVertexBufferObject );
+        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, mesh.mIndexBufferObject );
+        Renderer::RebindVertexArray();
+        glDrawElements( GL_TRIANGLES, mesh.mTriangleCount * 3, GL_UNSIGNED_INT, NULL );
+      }
     }
 
     //////////////////////////////////////////////////////////////////////////

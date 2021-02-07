@@ -25,6 +25,7 @@ struct Vertex
 };
 #pragma pack()
 
+std::map<int, Geometry::Node> Geometry::mNodes;
 std::map<int, Geometry::Mesh> Geometry::mMeshes;
 std::map<int, Geometry::Material> Geometry::mMaterials;
 
@@ -56,6 +57,27 @@ Renderer::Texture * LoadTexture( const aiString & _path, const std::string & _fo
   }
 
   return NULL;
+}
+
+int nNodes = 0;
+void ParseNode( const aiScene * scene, aiNode * sceneNode, int nParentIndex )
+{
+  Geometry::Node node;
+  node.nID = nNodes++;
+  node.nParentID = nParentIndex;
+
+  for ( int i = 0; i < sceneNode->mNumMeshes; i++ )
+  {
+    node.mMeshes.push_back( sceneNode->mMeshes[ i ] );
+  }
+
+  aiMatrix4x4 m = sceneNode->mTransformation.Transpose();
+  memcpy( &node.matTransformation, &m.a1, sizeof( float ) * 16 );
+
+  Geometry::mNodes.insert( { node.nID, node } );
+
+  for ( int i = 0; i < sceneNode->mNumChildren; i++ )
+    ParseNode( scene, sceneNode->mChildren[ i ], node.nID );
 }
 
 bool Geometry::LoadMesh( const char * _path )
@@ -93,7 +115,8 @@ bool Geometry::LoadMesh( const char * _path )
     return false;
   }
 
-  // TODO: load nodes
+  nNodes = 0;
+  ParseNode( scene, scene->mRootNode, -1 );
 
   for ( int i = 0; i < scene->mNumMeshes; i++ )
   {
@@ -213,6 +236,8 @@ bool Geometry::LoadMesh( const char * _path )
 
 void Geometry::UnloadMesh()
 {
+  mNodes.clear();
+
   for ( std::map<int, Material>::iterator it = mMaterials.begin(); it != mMaterials.end(); it++ )
   {
     if ( it->second.textureDiffuse )
@@ -240,6 +265,8 @@ void Geometry::UnloadMesh()
       Renderer::ReleaseTexture( it->second.textureMetallic );
     }
   }
+  mMaterials.clear();
+
   for ( std::map<int, Mesh>::iterator it = mMeshes.begin(); it != mMeshes.end(); it++ )
   {
     glDeleteBuffers( 1, &it->second.mIndexBufferObject );
