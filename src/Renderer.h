@@ -88,4 +88,6 @@ struct MouseEvent
 };
 extern MouseEvent mouseEventBuffer[ 512 ];
 extern int mouseEventBufferCount;
+extern std::string dropEventBuffer[ 512 ];
+extern int dropEventBufferCount;
 } // namespace

@@ -211,6 +211,16 @@ int main( int argc, const char * argv[] )
     ImGui::Render();
 
     //////////////////////////////////////////////////////////////////////////
+    // Drag'n'drop
+
+    for ( int i = 0; i < Renderer::dropEventBufferCount; i++ )
+    {
+      std::string & path = Renderer::dropEventBuffer[ i ];
+      Geometry::LoadMesh( path.c_str() );
+    }
+    Renderer::dropEventBufferCount = 0;
+
+    //////////////////////////////////////////////////////////////////////////
     // Mouse rotation
 
     if ( !io.WantCaptureMouse )

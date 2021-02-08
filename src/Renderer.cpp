@@ -1,5 +1,6 @@
 
 #include <cstdio>
+#include <string>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -56,6 +57,7 @@ static void error_callback( int error, const char * description )
 void cursor_position_callback( GLFWwindow * window, double xpos, double ypos );
 void mouse_button_callback( GLFWwindow * window, int button, int action, int mods );
 void scroll_callback( GLFWwindow * window, double xoffset, double yoffset );
+void drop_callback( GLFWwindow * window, int path_count, const char * paths[] );
 
 bool Open( RENDERER_SETTINGS * settings )
 {
@@ -113,6 +115,7 @@ bool Open( RENDERER_SETTINGS * settings )
 
   glfwMakeContextCurrent( mWindow );
 
+  glfwSetDropCallback( mWindow, drop_callback );
   glfwSetCursorPosCallback( mWindow, cursor_position_callback );
   glfwSetMouseButtonCallback( mWindow, mouse_button_callback );
   glfwSetScrollCallback( mWindow, scroll_callback );
@@ -159,6 +162,8 @@ bool Open( RENDERER_SETTINGS * settings )
 
 MouseEvent mouseEventBuffer[ 512 ];
 int mouseEventBufferCount = 0;
+std::string dropEventBuffer[ 512 ];
+int dropEventBufferCount = 0;
 void cursor_position_callback( GLFWwindow * window, double xpos, double ypos )
 {
   mouseEventBuffer[ mouseEventBufferCount ].eventType = MOUSEEVENTTYPE_MOVE;
@@ -197,7 +202,14 @@ void scroll_callback( GLFWwindow * window, double xoffset, double yoffset )
   mouseEventBuffer[ mouseEventBufferCount ].y = (float) yoffset;
   mouseEventBufferCount++;
 }
-
+void drop_callback( GLFWwindow * window, int path_count, const char * paths[] )
+{
+  for ( int i = 0; i < path_count; i++ )
+  {
+    dropEventBuffer[ dropEventBufferCount ] = paths[ i ];
+    dropEventBufferCount++;
+  }
+}
 void __SetupVertexArray( const char * name, int sizeInFloats, int & offsetInFloats )
 {
   unsigned int stride = sizeof( float ) * 14;
@@ -236,6 +248,7 @@ void RebindVertexArray()
 void EndFrame()
 {
   mouseEventBufferCount = 0;
+  dropEventBufferCount = 0;
   glfwSwapBuffers( mWindow );
   glfwPollEvents();
 }
