@@ -83,6 +83,15 @@ void ParseNode( const aiScene * scene, aiNode * sceneNode, int nParentIndex )
   }
 }
 
+class GeometryLogging : public Assimp::LogStream
+{
+public:
+  void write( const char * message )
+  {
+    ::printf( "[assimp] %s\n", message );
+  }
+};
+
 bool Geometry::LoadMesh( const char * _path )
 {
   UnloadMesh();
@@ -112,11 +121,16 @@ bool Geometry::LoadMesh( const char * _path )
     aiProcess_SplitByBoneCount |
     0;
 
+  Assimp::DefaultLogger::create( "", Assimp::Logger::DEBUGGING );
+  Assimp::DefaultLogger::get()->attachStream( new GeometryLogging(), Assimp::Logger::Info | Assimp::Logger::Err | Assimp::Logger::Warn );
+
   const aiScene * scene = gImporter.ReadFile( _path, loadFlags );
   if ( !scene )
   {
     return false;
   }
+
+  Assimp::DefaultLogger::kill();
 
   gNodeCount = 0;
   ParseNode( scene, scene->mRootNode, -1 );
