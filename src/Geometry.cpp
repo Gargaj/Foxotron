@@ -204,26 +204,33 @@ bool Geometry::LoadMesh( const char * _path )
     Material material;
 
     aiString str;
+
+    material.mTextureDiffuse = NULL;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_DIFFUSE, 0 ), &str ) == AI_SUCCESS )
     {
       material.mTextureDiffuse = LoadTexture( str, folder );
     }
+    material.mTextureNormals = NULL;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_NORMALS, 0 ), &str ) == AI_SUCCESS )
     {
       material.mTextureNormals = LoadTexture( str, folder );
     }
+    material.mTextureSpecular = NULL;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_SPECULAR, 0 ), &str ) == AI_SUCCESS )
     {
       material.mTextureSpecular = LoadTexture( str, folder );
     }
+    material.mTextureAlbedo = NULL;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_BASE_COLOR, 0 ), &str ) == AI_SUCCESS )
     {
       material.mTextureAlbedo = LoadTexture( str, folder );
     }
+    material.mTextureRoughness = NULL;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_DIFFUSE_ROUGHNESS, 0 ), &str ) == AI_SUCCESS )
     {
       material.mTextureRoughness = LoadTexture( str, folder );
     }
+    material.mTextureMetallic = NULL;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_METALNESS, 0 ), &str ) == AI_SUCCESS )
     {
       material.mTextureMetallic = LoadTexture( str, folder );
