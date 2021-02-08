@@ -114,7 +114,6 @@ int main( int argc, const char * argv[] )
   float mouseClickPosX = 0.0f;
   float mouseClickPosY = 0.0f;
   glm::vec4 clearColor( 0.08f, 0.18f, 0.18f, 1.0f );
-  glm::mat4x4 matrices[ 64 ];
   std::string supportedExtensions = Geometry::GetSupportedExtensions();
   while ( !Renderer::WantsToQuit() && !appWantsToQuit )
   {
@@ -311,17 +310,20 @@ int main( int argc, const char * argv[] )
       const Geometry::Node & node = it->second;
 
       glm::mat4x4 matParent;
-      if ( node.mParentID == -1 )
+      if ( node.mParentID == -1 || !Geometry::mMatrices )
       {
         matParent = glm::mat4x4( 1.0f );
       }
-      else
+      else if ( Geometry::mMatrices )
       {
-        matParent = matrices[ node.mParentID ];
+        matParent = Geometry::mMatrices[ node.mParentID ];
       }
 
-      matrices[ node.mID ] = matParent * node.mTransformation;
-      Renderer::SetShaderConstant( "mat_world", matrices[ node.mID ] );
+      if ( Geometry::mMatrices )
+      {
+        Geometry::mMatrices[ node.mID ] = matParent * node.mTransformation;
+        Renderer::SetShaderConstant( "mat_world", Geometry::mMatrices[ node.mID ] );
+      }
 
       for ( int i=0; i<it->second.mMeshes.size(); i++ )
       {

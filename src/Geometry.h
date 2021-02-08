@@ -44,4 +44,5 @@ std::string GetSupportedExtensions();
 extern std::map<int, Node> mNodes;
 extern std::map<int, Mesh> mMeshes;
 extern std::map<int, Material> mMaterials;
+extern glm::mat4x4 * mMatrices;
 }

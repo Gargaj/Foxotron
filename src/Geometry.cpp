@@ -28,6 +28,7 @@ struct Vertex
 std::map<int, Geometry::Node> Geometry::mNodes;
 std::map<int, Geometry::Mesh> Geometry::mMeshes;
 std::map<int, Geometry::Material> Geometry::mMaterials;
+glm::mat4x4 * Geometry::mMatrices = NULL;
 
 Renderer::Texture * LoadTexture( const aiString & _path, const std::string & _folder )
 {
@@ -119,6 +120,8 @@ bool Geometry::LoadMesh( const char * _path )
 
   gNodeCount = 0;
   ParseNode( scene, scene->mRootNode, -1 );
+
+  mMatrices = Geometry::mNodes.size() ? new glm::mat4x4[ Geometry::mNodes.size() ] : nullptr;
 
   for ( unsigned int i = 0; i < scene->mNumMeshes; i++ )
   {
@@ -245,6 +248,12 @@ bool Geometry::LoadMesh( const char * _path )
 
 void Geometry::UnloadMesh()
 {
+  if ( mMatrices )
+  {
+    delete[] mMatrices;
+    mMatrices = NULL;
+  }
+
   mNodes.clear();
 
   for ( std::map<int, Material>::iterator it = mMaterials.begin(); it != mMaterials.end(); it++ )
