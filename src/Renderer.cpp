@@ -28,18 +28,6 @@ GLuint shaderProgram = 0;
 int nWidth = 0;
 int nHeight = 0;
 
-void MatrixOrthoOffCenterLH( float * pout, float l, float r, float b, float t, float zn, float zf )
-{
-  memset( pout, 0, sizeof( float ) * 4 * 4 );
-  pout[ 0 + 0 * 4 ] = 2.0f / ( r - l );
-  pout[ 1 + 1 * 4 ] = 2.0f / ( t - b );
-  pout[ 2 + 2 * 4 ] = 1.0f / ( zf - zn );
-  pout[ 3 + 0 * 4 ] = -1.0f - 2.0f * l / ( r - l );
-  pout[ 3 + 1 * 4 ] = 1.0f + 2.0f * t / ( b - t );
-  pout[ 3 + 2 * 4 ] = zn / ( zn - zf );
-  pout[ 3 + 3 * 4 ] = 1.0;
-}
-
 static void error_callback( int error, const char * description )
 {
   switch ( error )
