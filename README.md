@@ -14,4 +14,4 @@ ASSIMP based general purpose model viewer ("turntable") created for the Revision
 
 These software are available under their respective licenses.
 
-The remainder of this project code was written by Gargaj / Conspiracy and is public domain.
+The remainder of this project code was written by Gargaj / Conspiracy and is public domain. Large portions of the code were cannibalized from [Bonzomatic](https://github.com/Gargaj/Bonzomatic).
