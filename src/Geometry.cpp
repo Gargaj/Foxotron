@@ -198,6 +198,15 @@ bool Geometry::LoadMesh( const char * _path )
     }
 
     Mesh mesh;
+
+    glGenVertexArrays( 1, &mesh.mVertexArrayObject );
+    glGenBuffers( 1, &mesh.mVertexBufferObject );
+    glGenBuffers( 1, &mesh.mIndexBufferObject );
+
+    glBindVertexArray( mesh.mVertexArrayObject );
+    glBindBuffer( GL_ARRAY_BUFFER, mesh.mVertexBufferObject );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, mesh.mIndexBufferObject );
+
     mesh.mVertexCount = sceneMesh->mNumVertices;
 
     Vertex * vertices = new Vertex[ mesh.mVertexCount ];
@@ -249,14 +258,12 @@ bool Geometry::LoadMesh( const char * _path )
       }
     }
 
-    glGenBuffers( 1, &mesh.mVertexBufferObject );
-    glBindBuffer( GL_ARRAY_BUFFER, mesh.mVertexBufferObject );
     glBufferData( GL_ARRAY_BUFFER, sizeof( Vertex ) * mesh.mVertexCount, vertices, GL_STATIC_DRAW );
 
     delete[] vertices;
 
     mesh.mTriangleCount = sceneMesh->mNumFaces;
-    
+
     unsigned int * faces = new unsigned int[ sceneMesh->mNumFaces * 3 ];
 
     for ( unsigned int j = 0; j < sceneMesh->mNumFaces; j++ )
@@ -266,13 +273,13 @@ bool Geometry::LoadMesh( const char * _path )
       faces[ j * 3 + 2 ] = sceneMesh->mFaces[ j ].mIndices[ 2 ];
     }
 
-    glGenBuffers( 1, &mesh.mIndexBufferObject );
-    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, mesh.mIndexBufferObject );
-    glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * sceneMesh->mNumFaces * 3, faces, GL_STATIC_DRAW );
+    glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( unsigned int ) * sceneMesh->mNumFaces * 3, faces, GL_STATIC_DRAW );
 
     delete[] faces;
 
     mesh.mMaterialIndex = sceneMesh->mMaterialIndex;
+
+    Renderer::RebindVertexArray();
 
     mMeshes.insert( { i, mesh } );
   }
@@ -390,6 +397,7 @@ void Geometry::UnloadMesh()
   {
     glDeleteBuffers( 1, &it->second.mIndexBufferObject );
     glDeleteBuffers( 1, &it->second.mVertexBufferObject );
+    glDeleteVertexArrays( 1, &it->second.mVertexArrayObject );
   }
   mMeshes.clear();
 

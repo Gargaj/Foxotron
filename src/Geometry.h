@@ -26,6 +26,7 @@ struct Mesh
   int mTriangleCount;
   GLuint mIndexBufferObject;
   int mMaterialIndex;
+  GLuint mVertexArrayObject;
 
   glm::vec3 mAABBMin;
   glm::vec3 mAABBMax;

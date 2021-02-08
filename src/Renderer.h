@@ -63,7 +63,6 @@ Texture * CreateA8TextureFromData( int w, int h, const unsigned char * data );
 Texture * Create1DR32Texture( int w );
 bool UpdateR32Texture( Texture * tex, float * data );
 void SetShaderTexture( const char * szTextureName, Texture * tex );
-void BindTexture( Texture * tex ); // temporary function until all the quad rendering is moved to the renderer
 void ReleaseTexture( Texture * tex );
 
 enum MOUSEEVENTTYPE

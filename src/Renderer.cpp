@@ -24,7 +24,6 @@ GLFWwindow * mWindow = NULL;
 bool run = true;
 
 GLuint shaderProgram = 0;
-GLuint vertexArray = 0;
 
 int nWidth = 0;
 int nHeight = 0;
@@ -153,8 +152,6 @@ bool Open( RENDERER_SETTINGS * settings )
 
   glViewport( 0, 0, nWidth, nHeight );
 
-  glGenVertexArrays( 1, &vertexArray );
-
   run = true;
 
   return true;
@@ -235,8 +232,6 @@ void StartFrame( glm::vec4 & clearColor )
 
 void RebindVertexArray()
 {
-  glBindVertexArray( vertexArray );
-
   int offset = 0;
   __SetupVertexArray( "in_pos", 3, offset );
   __SetupVertexArray( "in_normal", 3, offset );
@@ -522,33 +517,6 @@ void CopyBackbufferToTexture( Texture * tex )
   glActiveTexture( GL_TEXTURE0 + ( (GLTexture *) tex )->unit );
   glBindTexture( GL_TEXTURE_2D, ( (GLTexture *) tex )->ID );
   glCopyTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, 0, 0, nWidth, nHeight, 0 );
-}
-
-void BindTexture( Texture * tex )
-{
-/*
-  if ( lastTexture != tex )
-  {
-    lastTexture = tex;
-    if ( tex )
-    {
-      __FlushRenderCache();
-
-      GLint location = glGetUniformLocation( glhGUIProgram, "tex" );
-      if ( location != -1 )
-      {
-        glProgramUniform1i( glhGUIProgram, location, ( (GLTexture *) tex )->unit );
-        glActiveTexture( GL_TEXTURE0 + ( (GLTexture *) tex )->unit );
-        switch ( tex->type )
-        {
-          case TEXTURETYPE_1D: glBindTexture( GL_TEXTURE_1D, ( (GLTexture *) tex )->ID ); break;
-          case TEXTURETYPE_2D: glBindTexture( GL_TEXTURE_2D, ( (GLTexture *) tex )->ID ); break;
-        }
-      }
-
-    }
-  }
-*/
 }
 
 }// namespace Renderer

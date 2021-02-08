@@ -104,14 +104,14 @@ int main( int argc, const char * argv[] )
 
   //////////////////////////////////////////////////////////////////////////
   // Bootstrap
+  if ( !LoadShader( &gShaders[ 0 ] ) )
+  {
+    return -4;
+  }
+
   if ( argc >= 2 )
   {
     LoadMesh( argv[ 1 ] );
-  }
-
-  if ( !LoadShader( &gShaders[0] ) )
-  {
-    return -4;
   }
 
   //////////////////////////////////////////////////////////////////////////
@@ -370,10 +370,8 @@ int main( int argc, const char * argv[] )
           Renderer::SetShaderTexture( "tex_metallic", material.mTextureMetallic );
         }
 
+        glBindVertexArray( mesh.mVertexArrayObject );
 
-        glBindBuffer( GL_ARRAY_BUFFER, mesh.mVertexBufferObject );
-        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, mesh.mIndexBufferObject );
-        Renderer::RebindVertexArray();
         glDrawElements( GL_TRIANGLES, mesh.mTriangleCount * 3, GL_UNSIGNED_INT, NULL );
       }
     }
