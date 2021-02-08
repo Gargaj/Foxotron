@@ -12,7 +12,7 @@
 
 #include <glm.hpp>
 
-Assimp::Importer mImporter;
+Assimp::Importer gImporter;
 
 #pragma pack(1)
 struct Vertex
@@ -59,25 +59,27 @@ Renderer::Texture * LoadTexture( const aiString & _path, const std::string & _fo
   return NULL;
 }
 
-int nNodes = 0;
+int gNodeCount = 0;
 void ParseNode( const aiScene * scene, aiNode * sceneNode, int nParentIndex )
 {
   Geometry::Node node;
-  node.nID = nNodes++;
-  node.nParentID = nParentIndex;
+  node.mID = gNodeCount++;
+  node.mParentID = nParentIndex;
 
-  for ( int i = 0; i < sceneNode->mNumMeshes; i++ )
+  for ( unsigned int i = 0; i < sceneNode->mNumMeshes; i++ )
   {
     node.mMeshes.push_back( sceneNode->mMeshes[ i ] );
   }
 
   aiMatrix4x4 m = sceneNode->mTransformation.Transpose();
-  memcpy( &node.matTransformation, &m.a1, sizeof( float ) * 16 );
+  memcpy( &node.mTransformation, &m.a1, sizeof( float ) * 16 );
 
-  Geometry::mNodes.insert( { node.nID, node } );
+  Geometry::mNodes.insert( { node.mID, node } );
 
-  for ( int i = 0; i < sceneNode->mNumChildren; i++ )
-    ParseNode( scene, sceneNode->mChildren[ i ], node.nID );
+  for ( unsigned int i = 0; i < sceneNode->mNumChildren; i++ )
+  {
+    ParseNode( scene, sceneNode->mChildren[ i ], node.mID );
+  }
 }
 
 bool Geometry::LoadMesh( const char * _path )
@@ -95,9 +97,9 @@ bool Geometry::LoadMesh( const char * _path )
     folder = path.substr( 0, path.find_last_of( '/' ) + 1 );
   }
 
-  mImporter.SetPropertyInteger( AI_CONFIG_PP_SBBC_MAX_BONES, 24 );
+  gImporter.SetPropertyInteger( AI_CONFIG_PP_SBBC_MAX_BONES, 24 );
 
-  unsigned int dwLoadFlags =
+  unsigned int loadFlags =
     aiProcess_CalcTangentSpace |
     aiProcess_Triangulate |
     aiProcess_JoinIdenticalVertices |
@@ -109,16 +111,16 @@ bool Geometry::LoadMesh( const char * _path )
     aiProcess_SplitByBoneCount |
     0;
 
-  const aiScene * scene = mImporter.ReadFile( _path, dwLoadFlags );
+  const aiScene * scene = gImporter.ReadFile( _path, loadFlags );
   if ( !scene )
   {
     return false;
   }
 
-  nNodes = 0;
+  gNodeCount = 0;
   ParseNode( scene, scene->mRootNode, -1 );
 
-  for ( int i = 0; i < scene->mNumMeshes; i++ )
+  for ( unsigned int i = 0; i < scene->mNumMeshes; i++ )
   {
     aiMesh * sceneMesh = scene->mMeshes[ i ];
 
@@ -131,7 +133,7 @@ bool Geometry::LoadMesh( const char * _path )
     mesh.mVertexCount = sceneMesh->mNumVertices;
 
     Vertex * vertices = new Vertex[ mesh.mVertexCount ];
-    for ( int j = 0; j < sceneMesh->mNumVertices; j++ )
+    for ( unsigned int j = 0; j < sceneMesh->mNumVertices; j++ )
     {
       vertices[ j ].v3Vector.x = sceneMesh->mVertices[ j ].x;
       vertices[ j ].v3Vector.y = sceneMesh->mVertices[ j ].y;
@@ -179,7 +181,7 @@ bool Geometry::LoadMesh( const char * _path )
     
     unsigned int * faces = new unsigned int[ sceneMesh->mNumFaces * 3 ];
 
-    for ( int j = 0; j < sceneMesh->mNumFaces; j++ )
+    for ( unsigned int j = 0; j < sceneMesh->mNumFaces; j++ )
     {
       faces[ j * 3 + 0 ] = sceneMesh->mFaces[ j ].mIndices[ 0 ];
       faces[ j * 3 + 1 ] = sceneMesh->mFaces[ j ].mIndices[ 1 ];
@@ -197,34 +199,34 @@ bool Geometry::LoadMesh( const char * _path )
     mMeshes.insert( { i, mesh } );
   }
 
-  for ( int i = 0; i < scene->mNumMaterials; i++ )
+  for ( unsigned int i = 0; i < scene->mNumMaterials; i++ )
   {
     Material material;
 
     aiString str;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_DIFFUSE, 0 ), &str ) == AI_SUCCESS )
     {
-      material.textureDiffuse = LoadTexture( str, folder );
+      material.mTextureDiffuse = LoadTexture( str, folder );
     }
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_NORMALS, 0 ), &str ) == AI_SUCCESS )
     {
-      material.textureNormals = LoadTexture( str, folder );
+      material.mTextureNormals = LoadTexture( str, folder );
     }
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_SPECULAR, 0 ), &str ) == AI_SUCCESS )
     {
-      material.textureSpecular = LoadTexture( str, folder );
+      material.mTextureSpecular = LoadTexture( str, folder );
     }
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_BASE_COLOR, 0 ), &str ) == AI_SUCCESS )
     {
-      material.textureAlbedo = LoadTexture( str, folder );
+      material.mTextureAlbedo = LoadTexture( str, folder );
     }
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_DIFFUSE_ROUGHNESS, 0 ), &str ) == AI_SUCCESS )
     {
-      material.textureRoughness = LoadTexture( str, folder );
+      material.mTextureRoughness = LoadTexture( str, folder );
     }
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_METALNESS, 0 ), &str ) == AI_SUCCESS )
     {
-      material.textureMetallic = LoadTexture( str, folder );
+      material.mTextureMetallic = LoadTexture( str, folder );
     }
 
     mMaterials.insert( { i, material } );
@@ -240,29 +242,29 @@ void Geometry::UnloadMesh()
 
   for ( std::map<int, Material>::iterator it = mMaterials.begin(); it != mMaterials.end(); it++ )
   {
-    if ( it->second.textureDiffuse )
+    if ( it->second.mTextureDiffuse )
     {
-      Renderer::ReleaseTexture( it->second.textureDiffuse );
+      Renderer::ReleaseTexture( it->second.mTextureDiffuse );
     }
-    if ( it->second.textureNormals )
+    if ( it->second.mTextureNormals )
     {
-      Renderer::ReleaseTexture( it->second.textureNormals );
+      Renderer::ReleaseTexture( it->second.mTextureNormals );
     }
-    if ( it->second.textureSpecular )
+    if ( it->second.mTextureSpecular )
     {
-      Renderer::ReleaseTexture( it->second.textureSpecular );
+      Renderer::ReleaseTexture( it->second.mTextureSpecular );
     }
-    if ( it->second.textureAlbedo )
+    if ( it->second.mTextureAlbedo )
     {
-      Renderer::ReleaseTexture( it->second.textureAlbedo );
+      Renderer::ReleaseTexture( it->second.mTextureAlbedo );
     }
-    if ( it->second.textureRoughness )
+    if ( it->second.mTextureRoughness )
     {
-      Renderer::ReleaseTexture( it->second.textureRoughness );
+      Renderer::ReleaseTexture( it->second.mTextureRoughness );
     }
-    if ( it->second.textureMetallic )
+    if ( it->second.mTextureMetallic )
     {
-      Renderer::ReleaseTexture( it->second.textureMetallic );
+      Renderer::ReleaseTexture( it->second.mTextureMetallic );
     }
   }
   mMaterials.clear();
@@ -274,13 +276,13 @@ void Geometry::UnloadMesh()
   }
   mMeshes.clear();
 
-  mImporter.FreeScene();
+  gImporter.FreeScene();
 }
 
 std::string Geometry::GetSupportedExtensions()
 {
   std::string out;
-  mImporter.GetExtensionList( out );
+  gImporter.GetExtensionList( out );
 
   for ( int i = 0; i < out.length(); i++ )
   {

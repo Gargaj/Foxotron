@@ -14,10 +14,10 @@ namespace Geometry
 {
 struct Node
 {
-  unsigned int nID;
+  unsigned int mID;
   std::vector<unsigned int> mMeshes;
-  unsigned int nParentID;
-  glm::mat4x4 matTransformation;
+  unsigned int mParentID;
+  glm::mat4x4 mTransformation;
 };
 struct Mesh
 {
@@ -29,12 +29,12 @@ struct Mesh
 };
 struct Material
 {
-  Renderer::Texture * textureDiffuse;
-  Renderer::Texture * textureNormals;
-  Renderer::Texture * textureSpecular;
-  Renderer::Texture * textureAlbedo;
-  Renderer::Texture * textureRoughness;
-  Renderer::Texture * textureMetallic;
+  Renderer::Texture * mTextureDiffuse;
+  Renderer::Texture * mTextureNormals;
+  Renderer::Texture * mTextureSpecular;
+  Renderer::Texture * mTextureAlbedo;
+  Renderer::Texture * mTextureRoughness;
+  Renderer::Texture * mTextureMetallic;
 };
 
 bool LoadMesh( const char * _path );

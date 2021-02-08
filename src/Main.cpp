@@ -15,32 +15,32 @@
 
 struct Shader
 {
-  const char * name;
-  const char * vertexShaderPath;
-  const char * fragmentShaderPath;
-} shaders[] = {
+  const char * mName;
+  const char * mVertexShaderPath;
+  const char * mFragmentShaderPath;
+} gShaders[] = {
   { "Basic SpecGloss", "Shaders/basic_specgloss.vs", "Shaders/basic_specgloss.fs" },
   { NULL, NULL, NULL, },
 };
 
-Shader * current_shader = NULL;
-bool load_shader( Shader * shader )
+Shader * gCurrentShader = NULL;
+bool LoadShader( Shader * shader )
 {
   char vertexShader[ 16 * 1024 ] = { 0 };
-  FILE * fileVS = fopen( shader->vertexShaderPath, "rb" );
+  FILE * fileVS = fopen( shader->mVertexShaderPath, "rb" );
   if ( !fileVS )
   {
-    printf( "Vertex shader load failed: '%s'\n", shader->vertexShaderPath );
+    printf( "Vertex shader load failed: '%s'\n", shader->mVertexShaderPath );
     return false;
   }
   fread( vertexShader, 1, 16 * 1024, fileVS );
   fclose( fileVS );
 
   char fragmentShader[ 16 * 1024 ] = { 0 };
-  FILE * fileFS = fopen( shader->fragmentShaderPath, "rb" );
+  FILE * fileFS = fopen( shader->mFragmentShaderPath, "rb" );
   if ( !fileFS )
   {
-    printf( "Fragment shader load failed: '%s'\n", shader->fragmentShaderPath );
+    printf( "Fragment shader load failed: '%s'\n", shader->mFragmentShaderPath );
     return false;
   }
   fread( fragmentShader, 1, 16 * 1024, fileFS );
@@ -53,7 +53,7 @@ bool load_shader( Shader * shader )
     return false;
   }
 
-  current_shader = shader;
+  gCurrentShader = shader;
 
   return true;
 }
@@ -93,7 +93,7 @@ int main( int argc, const char * argv[] )
     Geometry::LoadMesh( argv[ 1 ] );
   }
 
-  if ( !load_shader( &shaders[0] ) )
+  if ( !LoadShader( &gShaders[0] ) )
   {
     return -4;
   }
@@ -153,12 +153,12 @@ int main( int argc, const char * argv[] )
       }
       if ( ImGui::BeginMenu( "Shaders" ) )
       {
-        for ( int i = 0; shaders[ i ].name; i++ )
+        for ( int i = 0; gShaders[ i ].mName; i++ )
         {
-          bool selected = &shaders[ i ] == current_shader;
-          if ( ImGui::MenuItem( shaders[ i ].name, NULL, &selected ) )
+          bool selected = &gShaders[ i ] == gCurrentShader;
+          if ( ImGui::MenuItem( gShaders[ i ].mName, NULL, &selected ) )
           {
-            load_shader( &shaders[ i ] );
+            LoadShader( &gShaders[ i ] );
           }
         }
         ImGui::EndMenu();
@@ -310,46 +310,46 @@ int main( int argc, const char * argv[] )
     {
       const Geometry::Node & node = it->second;
 
-      glm::mat4x4 matParent, matPrevParent;
-      if ( node.nParentID == -1 )
+      glm::mat4x4 matParent;
+      if ( node.mParentID == -1 )
       {
         matParent = glm::mat4x4( 1.0f );
       }
       else
       {
-        matParent = matrices[ node.nParentID ];
+        matParent = matrices[ node.mParentID ];
       }
 
-      matrices[ node.nID ] = matParent * node.matTransformation;
-      Renderer::SetShaderConstant( "mat_world", matrices[ node.nID ] );
+      matrices[ node.mID ] = matParent * node.mTransformation;
+      Renderer::SetShaderConstant( "mat_world", matrices[ node.mID ] );
 
       for ( int i=0; i<it->second.mMeshes.size(); i++ )
       {
         const Geometry::Mesh & mesh = Geometry::mMeshes[ it->second.mMeshes[ i ] ];
         const Geometry::Material & material = Geometry::mMaterials[ mesh.mMaterialIndex ];
-        if ( material.textureDiffuse )
+        if ( material.mTextureDiffuse )
         {
-          Renderer::SetShaderTexture( "tex_diffuse", material.textureDiffuse );
+          Renderer::SetShaderTexture( "tex_diffuse", material.mTextureDiffuse );
         }
-        if ( material.textureNormals )
+        if ( material.mTextureNormals )
         {
-          Renderer::SetShaderTexture( "tex_normals", material.textureNormals );
+          Renderer::SetShaderTexture( "tex_normals", material.mTextureNormals );
         }
-        if ( material.textureSpecular )
+        if ( material.mTextureSpecular )
         {
-          Renderer::SetShaderTexture( "tex_specular", material.textureSpecular );
+          Renderer::SetShaderTexture( "tex_specular", material.mTextureSpecular );
         }
-        if ( material.textureAlbedo )
+        if ( material.mTextureAlbedo )
         {
-          Renderer::SetShaderTexture( "tex_albedo", material.textureAlbedo );
+          Renderer::SetShaderTexture( "tex_albedo", material.mTextureAlbedo );
         }
-        if ( material.textureRoughness )
+        if ( material.mTextureRoughness )
         {
-          Renderer::SetShaderTexture( "tex_roughness", material.textureRoughness );
+          Renderer::SetShaderTexture( "tex_roughness", material.mTextureRoughness );
         }
-        if ( material.textureMetallic )
+        if ( material.mTextureMetallic )
         {
-          Renderer::SetShaderTexture( "tex_metallic", material.textureMetallic );
+          Renderer::SetShaderTexture( "tex_metallic", material.mTextureMetallic );
         }
 
 
