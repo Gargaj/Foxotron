@@ -42,6 +42,7 @@ if (APPLE)
   set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
   set(CMAKE_XCODE_ATTRIBUTE_GCC_ENABLE_CPP_EXCEPTIONS "No")
   set(CMAKE_XCODE_ATTRIBUTE_GCC_ENABLE_CPP_RTTI "No")
+  set(CMAKE_CXX_STANDARD 11)
 endif ()
 
 ##############################################################################
@@ -199,14 +200,17 @@ elseif (WIN32)
   set(PLATFORM_LIBS opengl32 glu32 winmm shlwapi)
 endif ()
 set(FXTRN_PROJECT_LIBS ${FXTRN_PROJECT_LIBS} ${PLATFORM_LIBS})
-##############################################################################
 
+##############################################################################
 # create the executable
 link_directories(${FXTRN_LINK_DIRS})
 if (UNIX AND (NOT APPLE))
     set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
 endif ()
+
 add_executable(${FXTRN_EXE_NAME} ${FXTRN_PROJECT_SRCS})
+
+##############################################################################
 # Set compiler specific flags
 if (APPLE)
 #  set_target_properties(${FXTRN_EXE_NAME} PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/data/macosx/MacOSXBundleInfo.plist.in)
