@@ -104,6 +104,7 @@ int main( int argc, const char * argv[] )
   bool automaticCamera = false;
   glm::mat4x4 viewMatrix;
   glm::mat4x4 projectionMatrix;
+  glm::vec3 cameraTarget( 0.0f, 0.0f, 0.0f );
   float cameraDistance = 500.0f;
   bool movingCamera = false;
   bool movingLight = false;
@@ -148,6 +149,10 @@ int main( int argc, const char * argv[] )
         ImGui::MenuItem( "Show model info", NULL, &showModelInfo );
         ImGui::Separator();
         ImGui::ColorEdit4( "Background", (float *) &clearColor, ImGuiColorEditFlags_AlphaPreviewHalf );
+#ifdef _DEBUG
+        ImGui::Separator();
+        ImGui::DragFloat3( "Camera Target", (float *) &cameraTarget );
+#endif
         ImGui::EndMenu();
       }
       if ( ImGui::BeginMenu( "Shaders" ) )
@@ -302,7 +307,7 @@ int main( int argc, const char * argv[] )
     lightDirection = glm::rotateY( lightDirection, lightYaw );
     Renderer::SetShaderConstant( "light_direction", lightDirection );
 
-    viewMatrix = glm::lookAtRH( cameraPosition, glm::vec3( 0.0f, 0.0f, 0.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
+    viewMatrix = glm::lookAtRH( cameraPosition + cameraTarget, cameraTarget, glm::vec3( 0.0f, 1.0f, 0.0f ) );
     Renderer::SetShaderConstant( "mat_view", viewMatrix );
 
     for ( std::map<int, Geometry::Node>::iterator it = Geometry::mNodes.begin(); it != Geometry::mNodes.end(); it++ )
