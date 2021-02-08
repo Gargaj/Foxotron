@@ -11,6 +11,14 @@
 #include <assimp/Exporter.hpp>
 
 #include <glm.hpp>
+#include <common.hpp>
+
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif
 
 Assimp::Importer gImporter;
 
@@ -29,6 +37,24 @@ std::map<int, Geometry::Node> Geometry::mNodes;
 std::map<int, Geometry::Mesh> Geometry::mMeshes;
 std::map<int, Geometry::Material> Geometry::mMaterials;
 glm::mat4x4 * Geometry::mMatrices = NULL;
+glm::vec3 Geometry::mAABBMin;
+glm::vec3 Geometry::mAABBMax;
+
+// Transform an AABB into an OBB, and return its AABB
+void TransformBoundingBox( const glm::vec3 & inMin, const glm::vec3 & inMax, const glm::mat4x4 & m, glm::vec3 & outMin, glm::vec3 & outMax )
+{
+  static glm::vec3 xa; xa = glm::vec3( m[ 1 - 1 ][ 1 - 1 ], m[ 1 - 1 ][ 2 - 1 ], m[ 1 - 1 ][ 3 - 1 ] ) * inMin.x;
+  static glm::vec3 xb; xb = glm::vec3( m[ 1 - 1 ][ 1 - 1 ], m[ 1 - 1 ][ 2 - 1 ], m[ 1 - 1 ][ 3 - 1 ] ) * inMax.x;
+
+  static glm::vec3 ya; ya = glm::vec3( m[ 2 - 1 ][ 1 - 1 ], m[ 2 - 1 ][ 2 - 1 ], m[ 2 - 1 ][ 3 - 1 ] ) * inMin.y;
+  static glm::vec3 yb; yb = glm::vec3( m[ 2 - 1 ][ 1 - 1 ], m[ 2 - 1 ][ 2 - 1 ], m[ 2 - 1 ][ 3 - 1 ] ) * inMax.y;
+
+  static glm::vec3 za; za = glm::vec3( m[ 3 - 1 ][ 1 - 1 ], m[ 3 - 1 ][ 2 - 1 ], m[ 3 - 1 ][ 3 - 1 ] ) * inMin.z;
+  static glm::vec3 zb; zb = glm::vec3( m[ 3 - 1 ][ 1 - 1 ], m[ 3 - 1 ][ 2 - 1 ], m[ 3 - 1 ][ 3 - 1 ] ) * inMax.z;
+
+  outMin = glm::min( xa, xb ) + glm::min( ya, yb ) + glm::min( za, zb ) + glm::vec3( m[ 4 - 1 ][ 1 - 1 ], m[ 4 - 1 ][ 2 - 1 ], m[ 4 - 1 ][ 3 - 1 ] );
+  outMax = glm::max( xa, xb ) + glm::max( ya, yb ) + glm::max( za, zb ) + glm::vec3( m[ 4 - 1 ][ 1 - 1 ], m[ 4 - 1 ][ 2 - 1 ], m[ 4 - 1 ][ 3 - 1 ] );
+}
 
 Renderer::Texture * LoadTexture( const aiString & _path, const std::string & _folder )
 {
@@ -43,6 +69,7 @@ Renderer::Texture * LoadTexture( const aiString & _path, const std::string & _fo
     filename = filename.substr( filename.find_last_of( '/' ) + 1 );
   }
 
+  printf( "[geometry] Loading texture: '%s'\n", filename.c_str() );
   Renderer::Texture * texture = Renderer::CreateRGBA8TextureFromFile( filename.c_str() );
   if ( texture )
   {
@@ -57,6 +84,7 @@ Renderer::Texture * LoadTexture( const aiString & _path, const std::string & _fo
     return texture;
   }
 
+  printf( "[geometry] WARNING: Texture loading failed: '%s'\n", filename.c_str() );
   return NULL;
 }
 
@@ -88,7 +116,7 @@ class GeometryLogging : public Assimp::LogStream
 public:
   void write( const char * message )
   {
-    ::printf( "[assimp] %s\n", message );
+    printf( "[assimp] %s", message );
   }
 };
 
@@ -137,6 +165,29 @@ bool Geometry::LoadMesh( const char * _path )
 
   mMatrices = Geometry::mNodes.size() ? new glm::mat4x4[ Geometry::mNodes.size() ] : nullptr;
 
+  //////////////////////////////////////////////////////////////////////////
+  // Calculate node transforms
+  if ( mMatrices )
+  {
+    for ( std::map<int, Geometry::Node>::iterator it = Geometry::mNodes.begin(); it != Geometry::mNodes.end(); it++ )
+    {
+      const Geometry::Node & node = it->second;
+
+      glm::mat4x4 matParent;
+      if ( node.mParentID == -1 || !Geometry::mMatrices )
+      {
+        matParent = glm::mat4x4( 1.0f );
+      }
+      else
+      {
+        matParent = mMatrices[ node.mParentID ];
+      }
+
+      mMatrices[ node.mID ] = matParent * node.mTransformation;
+    }
+  }
+
+  printf( "[geometry] Loading %d meshes\n", scene->mNumMeshes );
   for ( unsigned int i = 0; i < scene->mNumMeshes; i++ )
   {
     aiMesh * sceneMesh = scene->mMeshes[ i ];
@@ -186,6 +237,16 @@ bool Geometry::LoadMesh( const char * _path )
         vertices[ j ].fTexcoord.x = 0.0f;
         vertices[ j ].fTexcoord.y = 0.0f;
       }
+
+      if ( j == 0 )
+      {
+        mesh.mAABBMin = mesh.mAABBMax = vertices[ j ].v3Vector;
+      }
+      else
+      {
+        mesh.mAABBMin = glm::min( mesh.mAABBMin, vertices[ j ].v3Vector );
+        mesh.mAABBMax = glm::max( mesh.mAABBMax, vertices[ j ].v3Vector );
+      }
     }
 
     glGenBuffers( 1, &mesh.mVertexBufferObject );
@@ -216,6 +277,32 @@ bool Geometry::LoadMesh( const char * _path )
     mMeshes.insert( { i, mesh } );
   }
 
+  printf( "[geometry] Calculating AABB\n" );
+  bool aabbSet = false;
+  for ( std::map<int, Geometry::Node>::iterator it = Geometry::mNodes.begin(); it != Geometry::mNodes.end(); it++ )
+  {
+    const Geometry::Node & node = it->second;
+    for ( int i = 0; i < it->second.mMeshes.size(); i++ )
+    {
+      const Geometry::Mesh & mesh = Geometry::mMeshes[ it->second.mMeshes[ i ] ];
+
+      glm::vec3 aabbMin;
+      glm::vec3 aabbMax;
+      TransformBoundingBox( mesh.mAABBMin, mesh.mAABBMax, Geometry::mMatrices[ node.mID ], aabbMin, aabbMax );
+
+      if ( !aabbSet )
+      {
+        mAABBMin = aabbMin;
+        mAABBMax = aabbMax;
+        aabbSet = true;
+      }
+      mAABBMin = glm::min( aabbMin, mAABBMin );
+      mAABBMax = glm::max( aabbMax, mAABBMax );
+    }
+  }
+  printf( "[geometry] Calculated AABB: (%.3f, %.3f, %.3f), (%.3f, %.3f, %.3f)\n", mAABBMin.x, mAABBMin.y, mAABBMin.z, mAABBMax.x, mAABBMax.y, mAABBMax.z );
+
+  printf( "[geometry] Loading %d materials\n", scene->mNumMaterials );
   for ( unsigned int i = 0; i < scene->mNumMaterials; i++ )
   {
     Material material;
@@ -329,4 +416,3 @@ std::string Geometry::GetSupportedExtensions()
 
   return out;
 }
-

@@ -58,6 +58,22 @@ bool LoadShader( Shader * shader )
   return true;
 }
 
+glm::vec3 cameraTarget( 0.0f, 0.0f, 0.0f );
+float cameraDistance = 500.0f;
+
+bool LoadMesh( const char * path )
+{
+  if ( !Geometry::LoadMesh( path ) )
+  {
+    return false;
+  }
+
+  cameraTarget = ( Geometry::mAABBMin + Geometry::mAABBMax ) / 2.0f;
+  cameraDistance = glm::length( cameraTarget - Geometry::mAABBMin ) * 4.0f;
+
+  return true;
+}
+
 int main( int argc, const char * argv[] )
 {
   //////////////////////////////////////////////////////////////////////////
@@ -90,7 +106,7 @@ int main( int argc, const char * argv[] )
   // Bootstrap
   if ( argc >= 2 )
   {
-    Geometry::LoadMesh( argv[ 1 ] );
+    LoadMesh( argv[ 1 ] );
   }
 
   if ( !LoadShader( &gShaders[0] ) )
@@ -104,8 +120,6 @@ int main( int argc, const char * argv[] )
   bool automaticCamera = false;
   glm::mat4x4 viewMatrix;
   glm::mat4x4 projectionMatrix;
-  glm::vec3 cameraTarget( 0.0f, 0.0f, 0.0f );
-  float cameraDistance = 500.0f;
   bool movingCamera = false;
   bool movingLight = false;
   float cameraYaw = 0.0f;
@@ -178,7 +192,7 @@ int main( int argc, const char * argv[] )
 
     if ( file_dialog.showFileDialog( "Open model", imgui_addons::ImGuiFileBrowser::DialogMode::OPEN, ImVec2( 700, 310 ), supportedExtensions.c_str() ) )
     {
-      Geometry::LoadMesh( file_dialog.selected_path.c_str() );
+      LoadMesh( file_dialog.selected_path.c_str() );
     }
 
     if ( showModelInfo )
@@ -216,7 +230,8 @@ int main( int argc, const char * argv[] )
     for ( int i = 0; i < Renderer::dropEventBufferCount; i++ )
     {
       std::string & path = Renderer::dropEventBuffer[ i ];
-      Geometry::LoadMesh( path.c_str() );
+      LoadMesh( path.c_str() );
+
     }
     Renderer::dropEventBufferCount = 0;
 
@@ -324,23 +339,9 @@ int main( int argc, const char * argv[] )
     {
       const Geometry::Node & node = it->second;
 
-      glm::mat4x4 matParent;
-      if ( node.mParentID == -1 || !Geometry::mMatrices )
-      {
-        matParent = glm::mat4x4( 1.0f );
-      }
-      else if ( Geometry::mMatrices )
-      {
-        matParent = Geometry::mMatrices[ node.mParentID ];
-      }
+      Renderer::SetShaderConstant( "mat_world", Geometry::mMatrices[ node.mID ] );
 
-      if ( Geometry::mMatrices )
-      {
-        Geometry::mMatrices[ node.mID ] = matParent * node.mTransformation;
-        Renderer::SetShaderConstant( "mat_world", Geometry::mMatrices[ node.mID ] );
-      }
-
-      for ( int i=0; i<it->second.mMeshes.size(); i++ )
+      for ( int i = 0; i < it->second.mMeshes.size(); i++ )
       {
         const Geometry::Mesh & mesh = Geometry::mMeshes[ it->second.mMeshes[ i ] ];
         const Geometry::Material & material = Geometry::mMaterials[ mesh.mMaterialIndex ];

@@ -26,6 +26,9 @@ struct Mesh
   int mTriangleCount;
   GLuint mIndexBufferObject;
   int mMaterialIndex;
+
+  glm::vec3 mAABBMin;
+  glm::vec3 mAABBMax;
 };
 struct Material
 {
@@ -45,4 +48,6 @@ extern std::map<int, Node> mNodes;
 extern std::map<int, Mesh> mMeshes;
 extern std::map<int, Material> mMaterials;
 extern glm::mat4x4 * mMatrices;
+extern glm::vec3 mAABBMin;
+extern glm::vec3 mAABBMax;
 }
