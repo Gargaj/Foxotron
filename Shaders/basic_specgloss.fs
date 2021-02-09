@@ -7,6 +7,8 @@ in vec2 out_texcoord;
 in vec3 out_worldpos;
 
 uniform float specular_shininess;
+uniform vec4 color_diffuse;
+uniform vec4 color_specular;
 
 uniform vec3 camera_position;
 uniform vec3 light_direction;
@@ -30,15 +32,15 @@ float calculate_specular( vec3 normal )
 
 void main(void)
 {
-  vec4 diffuse = texture( tex_diffuse, out_texcoord );
+  vec3 diffuse = texture( tex_diffuse, out_texcoord ).xyz;
   vec3 normalmap = normalize(texture( tex_normals, out_texcoord ).xyz * vec3(2.0) - vec3(1.0));
-  vec4 specular = texture( tex_specular, out_texcoord );
+  vec3 specular = texture( tex_specular, out_texcoord ).xyz * color_specular.rgb;
 
   vec3 normal = normalize( out_normal + normalmap.x * out_tangent + -normalmap.y * out_binormal );
   
   float ndotl = dot( normal, normalize( light_direction ) );
 
-  vec4 color = diffuse * ndotl + specular * calculate_specular( normal );
+  vec3 color = diffuse * ndotl + color_specular.rgb * calculate_specular( normal ) * color_specular.a;
   
-  frag_color = pow( color, vec4(1.0 / 2.2) );
+  frag_color = vec4( pow( color, vec3(1.0f / 2.2f) ), 1.0f );
 }

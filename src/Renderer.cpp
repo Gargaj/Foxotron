@@ -324,7 +324,7 @@ void SetShaderConstant( const char * szConstName, float x, float y )
   }
 }
 
-void SetShaderConstant( const char * szConstName, glm::vec3 & vector )
+void SetShaderConstant( const char * szConstName, const glm::vec3 & vector )
 {
   GLint location = glGetUniformLocation( shaderProgram, szConstName );
   if ( location != -1 )
@@ -333,7 +333,16 @@ void SetShaderConstant( const char * szConstName, glm::vec3 & vector )
   }
 }
 
-void SetShaderConstant( const char * szConstName, glm::mat4x4 & matrix )
+void SetShaderConstant( const char * szConstName, const glm::vec4 & vector )
+{
+  GLint location = glGetUniformLocation( shaderProgram, szConstName );
+  if ( location != -1 )
+  {
+    glProgramUniform4f( shaderProgram, location, vector.x, vector.y, vector.z, vector.w );
+  }
+}
+
+void SetShaderConstant( const char * szConstName, const glm::mat4x4 & matrix )
 {
   GLint location = glGetUniformLocation( shaderProgram, szConstName );
   if ( location != -1 )
