@@ -398,7 +398,7 @@ int main( int argc, const char * argv[] )
     }
 
     float verticalFovInRadian = 0.5f;
-    projectionMatrix = glm::perspective( verticalFovInRadian, settings.nWidth / (float) settings.nHeight, 0.01f, gCameraDistance * 2.0f );
+    projectionMatrix = glm::perspective( verticalFovInRadian, settings.nWidth / (float) settings.nHeight, gCameraDistance / 1000.0f, gCameraDistance * 2.0f );
     Renderer::SetShaderConstant( "mat_projection", projectionMatrix );
 
     glm::vec3 cameraPosition( 0.0f, 0.0f, -1.0f );
