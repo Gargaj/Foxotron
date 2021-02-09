@@ -25,8 +25,8 @@ void main()
   o = mat_projection * o;
   gl_Position = o;
   
-  out_normal = normalize( in_normal ) * mat3( mat_world );
-  out_tangent = normalize( in_tangent ) * mat3( mat_world );
-  out_binormal = normalize( in_binormal ) * mat3( mat_world );
+  out_normal = normalize( in_normal * mat3( mat_world ) );
+  out_tangent = normalize( in_tangent * mat3( mat_world ) );
+  out_binormal = normalize( in_binormal * mat3( mat_world ) );
   out_texcoord = in_texcoord;
 }

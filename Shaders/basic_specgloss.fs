@@ -43,7 +43,7 @@ void main(void)
   vec3 normalmap = normalize(texture( tex_normals, out_texcoord ).xyz * vec3(2.0) - vec3(1.0));
   vec3 specular = has_tex_specular ? texture( tex_specular, out_texcoord ).xyz * color_specular.rgb : vec3(0.0f);
 
-  vec3 normal = has_tex_normals ? normalize( out_normal + normalmap.x * out_tangent + -normalmap.y * out_binormal ) : out_normal;
+  vec3 normal = normalize( has_tex_normals ? out_normal + normalmap.x * out_tangent + -normalmap.y * out_binormal : out_normal );
   
   float ndotl = dot( normal, -normalize( light_direction ) );
 
