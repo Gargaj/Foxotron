@@ -31,7 +31,7 @@ float calculate_specular( vec3 normal )
 void main(void)
 {
   vec4 diffuse = texture( tex_diffuse, out_texcoord );
-  vec3 normalmap = texture( tex_normals, out_texcoord ).xyz;
+  vec3 normalmap = normalize(texture( tex_normals, out_texcoord ).xyz * vec3(2.0) - vec3(1.0));
   vec4 specular = texture( tex_specular, out_texcoord );
 
   vec3 normal = normalize( out_normal + normalmap.x * out_tangent + -normalmap.y * out_binormal );
