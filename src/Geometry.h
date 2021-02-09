@@ -41,6 +41,7 @@ struct Material
   Renderer::Texture * mTextureAlbedo;
   Renderer::Texture * mTextureRoughness;
   Renderer::Texture * mTextureMetallic;
+  float mSpecularShininess;
 };
 
 bool LoadMesh( const char * _path );

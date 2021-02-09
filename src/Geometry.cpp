@@ -56,7 +56,7 @@ void TransformBoundingBox( const glm::vec3 & inMin, const glm::vec3 & inMax, con
   outMax = glm::max( xa, xb ) + glm::max( ya, yb ) + glm::max( za, zb ) + glm::vec3( m[ 4 - 1 ][ 1 - 1 ], m[ 4 - 1 ][ 2 - 1 ], m[ 4 - 1 ][ 3 - 1 ] );
 }
 
-Renderer::Texture * LoadTexture( const aiString & _path, const std::string & _folder )
+Renderer::Texture * LoadTexture( const char * _type, const aiString & _path, const std::string & _folder )
 {
   std::string filename( _path.data, _path.length );
 
@@ -69,7 +69,7 @@ Renderer::Texture * LoadTexture( const aiString & _path, const std::string & _fo
     filename = filename.substr( filename.find_last_of( '/' ) + 1 );
   }
 
-  printf( "[geometry] Loading texture: '%s'\n", filename.c_str() );
+  printf( "[geometry] Loading %s texture: '%s'\n", _type, filename.c_str() );
   Renderer::Texture * texture = Renderer::CreateRGBA8TextureFromFile( filename.c_str() );
   if ( texture )
   {
@@ -317,36 +317,45 @@ bool Geometry::LoadMesh( const char * _path )
 
     aiString str = scene->mMaterials[ i ]->GetName();
     material.mName = std::string( str.data, str.length );
+    printf( "[geometry] Loading material #%d: '%s'\n", i + 1, material.mName.c_str() );
 
     material.mTextureDiffuse = NULL;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_DIFFUSE, 0 ), &str ) == AI_SUCCESS )
     {
-      material.mTextureDiffuse = LoadTexture( str, folder );
+      material.mTextureDiffuse = LoadTexture( "diffuse", str, folder );
     }
     material.mTextureNormals = NULL;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_NORMALS, 0 ), &str ) == AI_SUCCESS )
     {
-      material.mTextureNormals = LoadTexture( str, folder );
+      material.mTextureNormals = LoadTexture( "normals", str, folder );
     }
     material.mTextureSpecular = NULL;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_SPECULAR, 0 ), &str ) == AI_SUCCESS )
     {
-      material.mTextureSpecular = LoadTexture( str, folder );
+      material.mTextureSpecular = LoadTexture( "specular", str, folder );
     }
     material.mTextureAlbedo = NULL;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_BASE_COLOR, 0 ), &str ) == AI_SUCCESS )
     {
-      material.mTextureAlbedo = LoadTexture( str, folder );
+      material.mTextureAlbedo = LoadTexture( "albedo", str, folder );
     }
     material.mTextureRoughness = NULL;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_DIFFUSE_ROUGHNESS, 0 ), &str ) == AI_SUCCESS )
     {
-      material.mTextureRoughness = LoadTexture( str, folder );
+      material.mTextureRoughness = LoadTexture( "roughness", str, folder );
     }
     material.mTextureMetallic = NULL;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_METALNESS, 0 ), &str ) == AI_SUCCESS )
     {
-      material.mTextureMetallic = LoadTexture( str, folder );
+      material.mTextureMetallic = LoadTexture( "metallic", str, folder );
+    }
+
+    float f = 0.0f;
+
+    material.mSpecularShininess = 1.0f;
+    if ( aiGetMaterialFloat( scene->mMaterials[ i ], AI_MATKEY_SHININESS, &f ) == AI_SUCCESS )
+    {
+      material.mSpecularShininess = f;
     }
 
     mMaterials.insert( { i, material } );

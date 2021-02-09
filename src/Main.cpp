@@ -430,6 +430,9 @@ int main( int argc, const char * argv[] )
       {
         const Geometry::Mesh & mesh = Geometry::mMeshes[ it->second.mMeshes[ i ] ];
         const Geometry::Material & material = Geometry::mMaterials[ mesh.mMaterialIndex ];
+
+        Renderer::SetShaderConstant( "specular_shininess", material.mSpecularShininess );
+
         if ( material.mTextureDiffuse )
         {
           Renderer::SetShaderTexture( "tex_diffuse", material.mTextureDiffuse );

@@ -6,6 +6,8 @@ in vec3 out_binormal;
 in vec2 out_texcoord;
 in vec3 out_worldpos;
 
+uniform float specular_shininess;
+
 uniform vec3 camera_position;
 uniform vec3 light_direction;
 
@@ -17,13 +19,11 @@ out vec4 frag_color;
 
 float calculate_specular( vec3 normal )
 {
-  float shininess = 8.0f;
-  
   vec3 V = normalize( camera_position - out_worldpos );
   vec3 L = normalize( light_direction );
   vec3 H = normalize( V + L );
   float rdotv = clamp( dot( normal, H ), 0.0, 1.0 );
-  float total_specular = pow( rdotv, shininess );
+  float total_specular = pow( rdotv, specular_shininess );
 
   return total_specular;
 }
