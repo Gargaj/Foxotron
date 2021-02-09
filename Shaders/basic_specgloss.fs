@@ -17,6 +17,13 @@ uniform sampler2D tex_diffuse;
 uniform sampler2D tex_normals;
 uniform sampler2D tex_specular;
 
+uniform bool has_tex_diffuse;
+uniform bool has_tex_normals;
+uniform bool has_tex_specular;
+uniform bool has_tex_albedo;
+uniform bool has_tex_roughness;
+uniform bool has_tex_metallic;
+
 out vec4 frag_color;
 
 float calculate_specular( vec3 normal )
@@ -34,13 +41,13 @@ void main(void)
 {
   vec3 diffuse = texture( tex_diffuse, out_texcoord ).xyz;
   vec3 normalmap = normalize(texture( tex_normals, out_texcoord ).xyz * vec3(2.0) - vec3(1.0));
-  vec3 specular = texture( tex_specular, out_texcoord ).xyz * color_specular.rgb;
+  vec3 specular = has_tex_specular ? texture( tex_specular, out_texcoord ).xyz * color_specular.rgb : vec3(0.0f);
 
-  vec3 normal = normalize( out_normal + normalmap.x * out_tangent + -normalmap.y * out_binormal );
+  vec3 normal = has_tex_normals ? normalize( out_normal + normalmap.x * out_tangent + -normalmap.y * out_binormal ) : out_normal;
   
-  float ndotl = dot( normal, normalize( light_direction ) );
+  float ndotl = dot( normal, -normalize( light_direction ) );
 
-  vec3 color = diffuse * ndotl + color_specular.rgb * calculate_specular( normal ) * color_specular.a;
+  vec3 color = ((has_tex_diffuse ? diffuse : color_diffuse.rgb) + color_specular.rgb * calculate_specular( normal ) * color_specular.a) * ndotl;
   
-  frag_color = vec4( pow( color, vec3(1.0f / 2.2f) ), 1.0f );
+  frag_color = vec4( pow( color, vec3(1.0f) ), 1.0f );
 }

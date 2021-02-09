@@ -306,6 +306,15 @@ bool ReloadShaders( const char * szVertexShaderCode, int nVertexShaderCodeSize, 
   return true;
 }
 
+void SetShaderConstant( const char * szConstName, bool x )
+{
+  GLint location = glGetUniformLocation( shaderProgram, szConstName );
+  if ( location != -1 )
+  {
+    glProgramUniform1i( shaderProgram, location, x ? 1 : 0 );
+  }
+}
+
 void SetShaderConstant( const char * szConstName, float x )
 {
   GLint location = glGetUniformLocation( shaderProgram, szConstName );
@@ -384,7 +393,7 @@ Texture * CreateRGBA8TextureFromFile( const char * szFilename )
   int width = 0;
   int height = 0;
   void * data = NULL;
-  GLenum internalFormat = GL_SRGB8_ALPHA8;
+  GLenum internalFormat = GL_RGBA8;
   GLenum srcFormat = GL_RGBA;
   GLenum format = GL_UNSIGNED_BYTE;
   if ( stbi_is_hdr( szFilename ) )

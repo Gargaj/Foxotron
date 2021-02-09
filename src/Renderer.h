@@ -37,6 +37,7 @@ bool WantsToQuit();
 void RenderFullscreenQuad();
 
 bool ReloadShaders( const char * szVertexShaderCode, int nVertexShaderCodeSize, const char * szFragmentShaderCode, int nFragmentShaderCodeSize, char * szErrorBuffer, int nErrorBufferSize );
+void SetShaderConstant( const char * szConstName, bool x );
 void SetShaderConstant( const char * szConstName, float x );
 void SetShaderConstant( const char * szConstName, float x, float y );
 void SetShaderConstant( const char * szConstName, const glm::vec3 & vector );

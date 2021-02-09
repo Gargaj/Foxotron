@@ -340,8 +340,7 @@ int main( int argc, const char * argv[] )
               }
               if ( movingLight )
               {
-                // Light is a direction so it moves "backwards"
-                lightYaw += ( mouseEvent.x - mouseClickPosX ) / rotationSpeed;
+                lightYaw -= ( mouseEvent.x - mouseClickPosX ) / rotationSpeed;
                 lightPitch -= ( mouseEvent.y - mouseClickPosY ) / rotationSpeed;
 
                 // Clamp to avoid gimbal lock
@@ -437,6 +436,13 @@ int main( int argc, const char * argv[] )
         Renderer::SetShaderConstant( "color_diffuse", material.mColorDiffuse );
         Renderer::SetShaderConstant( "color_specular", material.mColorSpecular );
         Renderer::SetShaderConstant( "specular_shininess", material.mSpecularShininess );
+
+        Renderer::SetShaderConstant( "has_tex_diffuse", material.mTextureDiffuse != NULL );
+        Renderer::SetShaderConstant( "has_tex_normals", material.mTextureNormals != NULL );
+        Renderer::SetShaderConstant( "has_tex_specular", material.mTextureSpecular != NULL );
+        Renderer::SetShaderConstant( "has_tex_albedo", material.mTextureAlbedo != NULL );
+        Renderer::SetShaderConstant( "has_tex_roughness", material.mTextureRoughness != NULL );
+        Renderer::SetShaderConstant( "has_tex_metallic", material.mTextureMetallic != NULL );
 
         if ( material.mTextureDiffuse )
         {
