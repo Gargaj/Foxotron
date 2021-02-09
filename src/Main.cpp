@@ -58,8 +58,8 @@ bool LoadShader( Shader * shader )
   return true;
 }
 
-glm::vec3 cameraTarget( 0.0f, 0.0f, 0.0f );
-float cameraDistance = 500.0f;
+glm::vec3 gCameraTarget( 0.0f, 0.0f, 0.0f );
+float gCameraDistance = 500.0f;
 
 bool LoadMesh( const char * path )
 {
@@ -68,8 +68,8 @@ bool LoadMesh( const char * path )
     return false;
   }
 
-  cameraTarget = ( Geometry::mAABBMin + Geometry::mAABBMax ) / 2.0f;
-  cameraDistance = glm::length( cameraTarget - Geometry::mAABBMin ) * 4.0f;
+  gCameraTarget = ( Geometry::mAABBMin + Geometry::mAABBMax ) / 2.0f;
+  gCameraDistance = glm::length( gCameraTarget - Geometry::mAABBMin ) * 4.0f;
 
   return true;
 }
@@ -130,6 +130,14 @@ int main( int argc, const char * argv[] )
   float mouseClickPosY = 0.0f;
   glm::vec4 clearColor( 0.08f, 0.18f, 0.18f, 1.0f );
   std::string supportedExtensions = Geometry::GetSupportedExtensions();
+
+  bool xzySpace = false;
+  const glm::mat4x4 xzyMatrix(
+    1.0f, 0.0f, 0.0f, 0.0f,
+    0.0f, 0.0f, 1.0f, 0.0f,
+    0.0f,-1.0f, 0.0f, 0.0f,
+    0.0f, 0.0f, 0.0f, 1.0f );
+
   while ( !Renderer::WantsToQuit() && !appWantsToQuit )
   {
     Renderer::StartFrame( clearColor );
@@ -157,6 +165,16 @@ int main( int argc, const char * argv[] )
         }
         ImGui::EndMenu();
       }
+      if ( ImGui::BeginMenu( "Model" ) )
+      {
+        bool xyzSpace = !xzySpace;
+        if ( ImGui::MenuItem( "XYZ space", NULL, &xyzSpace ) )
+        {
+          xzySpace = !xzySpace;
+        }
+        ImGui::MenuItem( "XZY space", NULL, &xzySpace );
+        ImGui::EndMenu();
+      }
       if ( ImGui::BeginMenu( "View" ) )
       {
         ImGui::MenuItem( "Enable idle camera", NULL, &automaticCamera );
@@ -165,7 +183,7 @@ int main( int argc, const char * argv[] )
         ImGui::ColorEdit4( "Background", (float *) &clearColor, ImGuiColorEditFlags_AlphaPreviewHalf );
 #ifdef _DEBUG
         ImGui::Separator();
-        ImGui::DragFloat3( "Camera Target", (float *) &cameraTarget );
+        ImGui::DragFloat3( "Camera Target", (float *) &gCameraTarget );
 #endif
         ImGui::EndMenu();
       }
@@ -301,7 +319,7 @@ int main( int argc, const char * argv[] )
           case Renderer::MOUSEEVENTTYPE_SCROLL:
             {
               const float aspect = 1.1f;
-              cameraDistance *= mouseEvent.y < 0 ? aspect : 1 / aspect;
+              gCameraDistance *= mouseEvent.y < 0 ? aspect : 1 / aspect;
             }
             break;
         }
@@ -318,13 +336,13 @@ int main( int argc, const char * argv[] )
     }
 
     float verticalFovInRadian = 0.5f;
-    projectionMatrix = glm::perspective( verticalFovInRadian, settings.nWidth / (float) settings.nHeight, 0.01f, cameraDistance * 2.0f );
+    projectionMatrix = glm::perspective( verticalFovInRadian, settings.nWidth / (float) settings.nHeight, 0.01f, gCameraDistance * 2.0f );
     Renderer::SetShaderConstant( "mat_projection", projectionMatrix );
 
     glm::vec3 cameraPosition( 0.0f, 0.0f, -1.0f );
     cameraPosition = glm::rotateX( cameraPosition, cameraPitch );
     cameraPosition = glm::rotateY( cameraPosition, cameraYaw );
-    cameraPosition *= cameraDistance;
+    cameraPosition *= gCameraDistance;
     Renderer::SetShaderConstant( "camera_position", cameraPosition );
 
     glm::vec3 lightDirection( 0.0f, 0.0f, -1.0f );
@@ -332,14 +350,21 @@ int main( int argc, const char * argv[] )
     lightDirection = glm::rotateY( lightDirection, lightYaw );
     Renderer::SetShaderConstant( "light_direction", lightDirection );
 
-    viewMatrix = glm::lookAtRH( cameraPosition + cameraTarget, cameraTarget, glm::vec3( 0.0f, 1.0f, 0.0f ) );
+    viewMatrix = glm::lookAtRH( cameraPosition + gCameraTarget, gCameraTarget, glm::vec3( 0.0f, 1.0f, 0.0f ) );
     Renderer::SetShaderConstant( "mat_view", viewMatrix );
 
     for ( std::map<int, Geometry::Node>::iterator it = Geometry::mNodes.begin(); it != Geometry::mNodes.end(); it++ )
     {
       const Geometry::Node & node = it->second;
 
-      Renderer::SetShaderConstant( "mat_world", Geometry::mMatrices[ node.mID ] );
+      if ( xzySpace )
+      {
+        Renderer::SetShaderConstant( "mat_world", Geometry::mMatrices[ node.mID ] * xzyMatrix );
+      }
+      else
+      {
+        Renderer::SetShaderConstant( "mat_world", Geometry::mMatrices[ node.mID ] );
+      }
 
       for ( int i = 0; i < it->second.mMeshes.size(); i++ )
       {
