@@ -342,12 +342,6 @@ void SetShaderConstant( const char * szConstName, glm::mat4x4 & matrix )
   }
 }
 
-struct GLTexture : public Texture
-{
-  GLuint ID;
-  int unit;
-};
-
 int textureUnit = 0;
 
 Texture * CreateRGBA8Texture()
@@ -366,12 +360,12 @@ Texture * CreateRGBA8Texture()
   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 
-  GLTexture * tex = new GLTexture();
-  tex->width = nWidth;
-  tex->height = nHeight;
-  tex->ID = glTexId;
-  tex->type = TEXTURETYPE_2D;
-  tex->unit = textureUnit++;
+  Texture * tex = new Texture();
+  tex->mWidth = nWidth;
+  tex->mHeight = nHeight;
+  tex->mGLTextureID = glTexId;
+  tex->mType = TEXTURETYPE_2D;
+  tex->mGLTextureUnit = textureUnit++;
   return tex;
 }
 
@@ -409,12 +403,13 @@ Texture * CreateRGBA8TextureFromFile( const char * szFilename )
 
   stbi_image_free( data );
 
-  GLTexture * tex = new GLTexture();
-  tex->width = width;
-  tex->height = height;
-  tex->ID = glTexId;
-  tex->type = TEXTURETYPE_2D;
-  tex->unit = textureUnit++;
+  Texture * tex = new Texture();
+  tex->mWidth = width;
+  tex->mHeight = height;
+  tex->mType = TEXTURETYPE_2D;
+  tex->mFilename = szFilename;
+  tex->mGLTextureID = glTexId;
+  tex->mGLTextureUnit = textureUnit++;
   return tex;
 }
 
@@ -438,12 +433,12 @@ Texture * Create1DR32Texture( int w )
 
   glBindTexture( GL_TEXTURE_1D, 0 );
 
-  GLTexture * tex = new GLTexture();
-  tex->width = w;
-  tex->height = 1;
-  tex->ID = glTexId;
-  tex->type = TEXTURETYPE_1D;
-  tex->unit = textureUnit++;
+  Texture * tex = new Texture();
+  tex->mWidth = w;
+  tex->mHeight = 1;
+  tex->mGLTextureID = glTexId;
+  tex->mType = TEXTURETYPE_1D;
+  tex->mGLTextureUnit = textureUnit++;
   return tex;
 }
 
@@ -455,21 +450,21 @@ void SetShaderTexture( const char * szTextureName, Texture * tex )
   GLint location = glGetUniformLocation( shaderProgram, szTextureName );
   if ( location != -1 )
   {
-    glProgramUniform1i( shaderProgram, location, ( (GLTexture *) tex )->unit );
-    glActiveTexture( GL_TEXTURE0 + ( (GLTexture *) tex )->unit );
-    switch ( tex->type )
+    glProgramUniform1i( shaderProgram, location, ( (Texture *) tex )->mGLTextureUnit );
+    glActiveTexture( GL_TEXTURE0 + ( (Texture *) tex )->mGLTextureUnit );
+    switch ( tex->mType )
     {
-      case TEXTURETYPE_1D: glBindTexture( GL_TEXTURE_1D, ( (GLTexture *) tex )->ID ); break;
-      case TEXTURETYPE_2D: glBindTexture( GL_TEXTURE_2D, ( (GLTexture *) tex )->ID ); break;
+      case TEXTURETYPE_1D: glBindTexture( GL_TEXTURE_1D, ( (Texture *) tex )->mGLTextureID ); break;
+      case TEXTURETYPE_2D: glBindTexture( GL_TEXTURE_2D, ( (Texture *) tex )->mGLTextureID ); break;
     }
   }
 }
 
 bool UpdateR32Texture( Texture * tex, float * data )
 {
-  glActiveTexture( GL_TEXTURE0 + ( (GLTexture *) tex )->unit );
-  glBindTexture( GL_TEXTURE_1D, ( (GLTexture *) tex )->ID );
-  glTexSubImage1D( GL_TEXTURE_1D, 0, 0, tex->width, GL_RED, GL_FLOAT, data );
+  glActiveTexture( GL_TEXTURE0 + ( (Texture *) tex )->mGLTextureUnit );
+  glBindTexture( GL_TEXTURE_1D, ( (Texture *) tex )->mGLTextureID );
+  glTexSubImage1D( GL_TEXTURE_1D, 0, 0, tex->mWidth, GL_RED, GL_FLOAT, data );
 
   return true;
 }
@@ -486,24 +481,24 @@ Texture * CreateA8TextureFromData( int w, int h, const unsigned char * data )
 
   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 
-  GLTexture * tex = new GLTexture();
-  tex->width = w;
-  tex->height = h;
-  tex->ID = glTexId;
-  tex->type = TEXTURETYPE_2D;
-  tex->unit = 0; // this is always 0 cos we're not using shaders here
+  Texture * tex = new Texture();
+  tex->mWidth = w;
+  tex->mHeight = h;
+  tex->mGLTextureID = glTexId;
+  tex->mType = TEXTURETYPE_2D;
+  tex->mGLTextureUnit = 0; // this is always 0 cos we're not using shaders here
   return tex;
 }
 
 void ReleaseTexture( Texture * tex )
 {
-  glDeleteTextures( 1, &( (GLTexture *) tex )->ID );
+  glDeleteTextures( 1, &( (Texture *) tex )->mGLTextureID );
 }
 
 void CopyBackbufferToTexture( Texture * tex )
 {
-  glActiveTexture( GL_TEXTURE0 + ( (GLTexture *) tex )->unit );
-  glBindTexture( GL_TEXTURE_2D, ( (GLTexture *) tex )->ID );
+  glActiveTexture( GL_TEXTURE0 + ( (Texture *) tex )->mGLTextureUnit );
+  glBindTexture( GL_TEXTURE_2D, ( (Texture *) tex )->mGLTextureID );
   glCopyTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, 0, 0, nWidth, nHeight, 0 );
 }
 

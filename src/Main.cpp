@@ -74,6 +74,41 @@ bool LoadMesh( const char * path )
   return true;
 }
 
+void ShowNodeInImGui( int _parentID )
+{
+  for ( std::map<int, Geometry::Node>::iterator it = Geometry::mNodes.begin(); it != Geometry::mNodes.end(); it++ )
+  {
+    if ( it->second.mParentID == _parentID )
+    {
+      ImGui::Text( "%s", it->second.mName.c_str() );
+      ImGui::Indent();
+      for ( int i = 0; i < it->second.mMeshes.size(); i++ )
+      {
+        const Geometry::Mesh & mesh = Geometry::mMeshes[ it->second.mMeshes[ i ] ];
+        ImGui::TextColored( ImVec4( 1.0f, 0.5f, 1.0f, 1.0f ), "Mesh %d: %d vertices, %d triangles", i + 1, mesh.mVertexCount, mesh.mTriangleCount );
+      }
+
+      ShowNodeInImGui( it->second.mID );
+      ImGui::Unindent();
+    }
+  }
+}
+
+void ShowMaterialInImGui( const char * _channel, Renderer::Texture * _texture )
+{
+  if ( !_texture )
+  {
+    return;
+  }
+  if ( ImGui::BeginTabItem( _channel ) )
+  {
+    ImGui::Text( "Texture: %s", _texture->mFilename.c_str() );
+    ImGui::Text( "Dimensions: %d x %d", _texture->mWidth, _texture->mHeight );
+    ImGui::Image( (ImTextureID) _texture->mGLTextureID, ImVec2( 512.0f, 512.0f ) );
+    ImGui::EndTabItem();
+  }
+}
+
 int main( int argc, const char * argv[] )
 {
   //////////////////////////////////////////////////////////////////////////
@@ -230,9 +265,34 @@ int main( int argc, const char * argv[] )
 
         ImGui::EndTabItem();
       }
+      if ( ImGui::BeginTabItem( "Node tree" ) )
+      {
+        ShowNodeInImGui( -1 );
+
+        ImGui::EndTabItem();
+      }
       if ( ImGui::BeginTabItem( "Textures / Materials" ) )
       {
         ImGui::Text( "Material count: %d", Geometry::mMaterials.size() );
+
+        for ( std::map<int, Geometry::Material>::iterator it = Geometry::mMaterials.begin(); it != Geometry::mMaterials.end(); it++ )
+        {
+          if ( ImGui::CollapsingHeader( it->second.mName.c_str() ) )
+          {
+            ImGui::Indent();
+            if ( ImGui::BeginTabBar( it->second.mName.c_str() ) )
+            {
+              ShowMaterialInImGui( "Diffuse", it->second.mTextureDiffuse );
+              ShowMaterialInImGui( "Normals", it->second.mTextureNormals );
+              ShowMaterialInImGui( "Specular", it->second.mTextureSpecular );
+              ShowMaterialInImGui( "Albedo", it->second.mTextureAlbedo );
+              ShowMaterialInImGui( "Metallic", it->second.mTextureMetallic );
+              ShowMaterialInImGui( "Roughness", it->second.mTextureRoughness );
+              ImGui::EndTabBar();
+            }
+            ImGui::Unindent();
+          }
+        }
 
         ImGui::EndTabItem();
       }

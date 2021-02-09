@@ -94,6 +94,7 @@ void ParseNode( const aiScene * scene, aiNode * sceneNode, int nParentIndex )
   Geometry::Node node;
   node.mID = gNodeCount++;
   node.mParentID = nParentIndex;
+  node.mName = std::string( sceneNode->mName.data, sceneNode->mName.length );
 
   for ( unsigned int i = 0; i < sceneNode->mNumMeshes; i++ )
   {
@@ -314,7 +315,8 @@ bool Geometry::LoadMesh( const char * _path )
   {
     Material material;
 
-    aiString str;
+    aiString str = scene->mMaterials[ i ]->GetName();
+    material.mName = std::string( str.data, str.length );
 
     material.mTextureDiffuse = NULL;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_DIFFUSE, 0 ), &str ) == AI_SUCCESS )

@@ -52,9 +52,12 @@ enum TEXTURETYPE
 
 struct Texture
 {
-  int width;
-  int height;
-  TEXTURETYPE type;
+  int mWidth;
+  int mHeight;
+  TEXTURETYPE mType;
+  std::string mFilename;
+  unsigned int mGLTextureID;
+  int mGLTextureUnit;
 };
 
 Texture * CreateRGBA8Texture();

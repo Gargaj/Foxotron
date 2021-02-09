@@ -15,6 +15,7 @@ namespace Geometry
 struct Node
 {
   unsigned int mID;
+  std::string mName;
   std::vector<unsigned int> mMeshes;
   unsigned int mParentID;
   glm::mat4x4 mTransformation;
@@ -33,6 +34,7 @@ struct Mesh
 };
 struct Material
 {
+  std::string mName;
   Renderer::Texture * mTextureDiffuse;
   Renderer::Texture * mTextureNormals;
   Renderer::Texture * mTextureSpecular;
