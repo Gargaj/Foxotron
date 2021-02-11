@@ -44,11 +44,21 @@ void main(void)
   vec3 normalmap = normalize(texture( tex_normals, out_texcoord ).xyz * vec3(2.0) - vec3(1.0));
   vec3 specular = has_tex_specular ? texture( tex_specular, out_texcoord ).xyz * color_specular.rgb : vec3(0.0f);
 
-  vec3 normal = normalize( has_tex_normals ? out_normal + normalmap.x * out_tangent + -normalmap.y * out_binormal : out_normal );
-  
+  vec3 normal = out_normal;
+
+  if (has_tex_normals)
+  {
+    // Mikkelsen's tangent space normal map decoding. See http://mikktspace.com/ for rationale.
+    vec3 bi = cross( out_normal, out_tangent );
+    vec3 nmap = normalmap.xyz;
+    normal = nmap.x * out_tangent + nmap.y * bi + nmap.z * out_normal;
+  }
+
+  normal = normalize( normal );
+
   float ndotl = dot( normal, -normalize( light_direction ) );
 
   vec3 color = ((has_tex_diffuse ? diffuse : color_diffuse.rgb) + color_specular.rgb * calculate_specular( normal ) * color_specular.a) * ndotl;
-  
+
   frag_color = vec4( pow( color, vec3(1.0f) ), 1.0f );
 }
