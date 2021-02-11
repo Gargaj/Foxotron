@@ -291,6 +291,7 @@ int main( int argc, const char * argv[] )
               ShowMaterialInImGui( "Albedo", it->second.mTextureAlbedo );
               ShowMaterialInImGui( "Metallic", it->second.mTextureMetallic );
               ShowMaterialInImGui( "Roughness", it->second.mTextureRoughness );
+              ShowMaterialInImGui( "AO", it->second.mTextureAO );
               ImGui::EndTabBar();
             }
             ImGui::Unindent();
@@ -443,6 +444,7 @@ int main( int argc, const char * argv[] )
         Renderer::SetShaderConstant( "has_tex_albedo", material.mTextureAlbedo != NULL );
         Renderer::SetShaderConstant( "has_tex_roughness", material.mTextureRoughness != NULL );
         Renderer::SetShaderConstant( "has_tex_metallic", material.mTextureMetallic != NULL );
+        Renderer::SetShaderConstant( "has_tex_ao", material.mTextureAO != NULL );
 
         if ( material.mTextureDiffuse )
         {
@@ -467,6 +469,10 @@ int main( int argc, const char * argv[] )
         if ( material.mTextureMetallic )
         {
           Renderer::SetShaderTexture( "tex_metallic", material.mTextureMetallic );
+        }
+        if ( material.mTextureAO )
+        {
+          Renderer::SetShaderTexture( "tex_ao", material.mTextureAO );
         }
 
         glBindVertexArray( mesh.mVertexArrayObject );

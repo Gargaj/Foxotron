@@ -23,6 +23,7 @@ uniform bool has_tex_specular;
 uniform bool has_tex_albedo;
 uniform bool has_tex_roughness;
 uniform bool has_tex_metallic;
+uniform bool has_tex_ao;
 
 out vec4 frag_color;
 

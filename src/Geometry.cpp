@@ -349,6 +349,11 @@ bool Geometry::LoadMesh( const char * _path )
     {
       material.mTextureMetallic = LoadTexture( "metallic", str, folder );
     }
+    material.mTextureAO = NULL;
+    if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_AMBIENT_OCCLUSION, 0 ), &str ) == AI_SUCCESS )
+    {
+      material.mTextureAO = LoadTexture( "ao", str, folder );
+    }
 
     float f = 0.0f;
 
@@ -413,6 +418,10 @@ void Geometry::UnloadMesh()
     if ( it->second.mTextureMetallic )
     {
       Renderer::ReleaseTexture( it->second.mTextureMetallic );
+    }
+    if ( it->second.mTextureAO )
+    {
+      Renderer::ReleaseTexture( it->second.mTextureAO );
     }
   }
   mMaterials.clear();

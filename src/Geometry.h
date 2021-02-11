@@ -41,6 +41,7 @@ struct Material
   Renderer::Texture * mTextureAlbedo;
   Renderer::Texture * mTextureRoughness;
   Renderer::Texture * mTextureMetallic;
+  Renderer::Texture * mTextureAO;
   glm::vec4 mColorDiffuse;
   glm::vec4 mColorSpecular;
 
