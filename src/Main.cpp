@@ -410,10 +410,20 @@ int main( int argc, const char * argv[] )
     cameraPosition *= gCameraDistance;
     Renderer::SetShaderConstant( "camera_position", cameraPosition );
 
-    glm::vec3 lightDirection( 0.0f, 0.0f, -1.0f );
+    glm::vec3 lightDirection( 0.0f, 0.0f, 1.0f );
     lightDirection = glm::rotateX( lightDirection, lightPitch );
     lightDirection = glm::rotateY( lightDirection, lightYaw );
-    Renderer::SetShaderConstant( "light_direction", lightDirection );
+
+    glm::vec3 fillLightDirection( 0.0f, 0.0f, 1.0f );
+    fillLightDirection = glm::rotateX( fillLightDirection, lightPitch - 0.4f );
+    fillLightDirection = glm::rotateY( fillLightDirection, lightYaw + 0.8f );
+
+    Renderer::SetShaderConstant( "lights[0].direction", lightDirection );
+    Renderer::SetShaderConstant( "lights[0].color", glm::vec3( 1.0f ) );
+    Renderer::SetShaderConstant( "lights[1].direction", fillLightDirection );
+    Renderer::SetShaderConstant( "lights[1].color", glm::vec3( 0.5f ) );
+    Renderer::SetShaderConstant( "lights[2].direction", -fillLightDirection );
+    Renderer::SetShaderConstant( "lights[2].color", glm::vec3( 0.25f ) );
 
     viewMatrix = glm::lookAtRH( cameraPosition + gCameraTarget, gCameraTarget, glm::vec3( 0.0f, 1.0f, 0.0f ) );
     Renderer::SetShaderConstant( "mat_view", viewMatrix );
