@@ -1,5 +1,11 @@
 #version 410 core
 
+struct Light
+{
+  vec3 direction;
+  vec3 color;
+};
+
 in vec3 out_normal;
 in vec3 out_tangent;
 in vec3 out_binormal;
@@ -12,7 +18,7 @@ uniform vec4 color_diffuse;
 uniform vec4 color_specular;
 
 uniform vec3 camera_position;
-uniform vec3 light_direction;
+uniform Light lights[3];
 
 uniform sampler2D tex_diffuse;
 uniform sampler2D tex_normals;
@@ -31,7 +37,7 @@ out vec4 frag_color;
 float calculate_specular( vec3 normal )
 {
   vec3 V = normalize( camera_position - out_worldpos );
-  vec3 L = normalize( light_direction );
+  vec3 L = -normalize( lights[ 0 ].direction );
   vec3 H = normalize( V + L );
   float rdotv = clamp( dot( normal, H ), 0.0, 1.0 );
   float total_specular = pow( rdotv, specular_shininess );
@@ -57,7 +63,7 @@ void main(void)
 
   normal = normalize( normal );
 
-  float ndotl = dot( normal, -normalize( light_direction ) );
+  float ndotl = dot( normal, -normalize( lights[ 0 ].direction ) );
 
   vec3 color = mix( ((has_tex_diffuse ? diffuse : color_diffuse.rgb) + color_specular.rgb * calculate_specular( normal ) * color_specular.a), color_ambient.rgb, ndotl );
 

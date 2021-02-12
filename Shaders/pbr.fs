@@ -1,5 +1,11 @@
 #version 410 core
 
+struct Light
+{
+  vec3 direction;
+  vec3 color;
+};
+
 in vec3 out_normal;
 in vec3 out_tangent;
 in vec3 out_binormal;
@@ -12,7 +18,7 @@ uniform vec4 color_diffuse;
 uniform vec4 color_specular;
 
 uniform vec3 camera_position;
-uniform vec3 light_direction;
+uniform Light lights[3];
 
 uniform sampler2D tex_albedo;
 uniform sampler2D tex_diffuse;
@@ -35,17 +41,6 @@ uniform bool has_tex_ambient;
 out vec4 frag_color;
 
 const float PI = 3.1415926536;
-
-float calculate_specular( vec3 normal )
-{
-  vec3 V = normalize( camera_position - out_worldpos );
-  vec3 L = normalize( light_direction );
-  vec3 H = normalize( V + L );
-  float rdotv = clamp( dot( normal, H ), 0.0, 1.0 );
-  float total_specular = pow( rdotv, specular_shininess );
-
-  return total_specular;
-}
 
 vec3 fresnelSchlick( vec3 H, vec3 V, vec3 F0 )
 {
@@ -113,36 +108,41 @@ void main(void)
 
   normal = normalize( normal );
 
-  vec3 L = -normalize( light_direction );
   vec3 N = normal;
   vec3 V = normalize( camera_position - out_worldpos );
-  vec3 H = normalize( V + L );
 
   vec3 Lo = vec3(0.);
-
   vec3 F0 = vec3(0.04);
   F0 = mix( F0, baseColor, metallic );
-  vec3 F = fresnelSchlick( H, V, F0 );
-  vec3 radiance = vec3(1.0);
+
+
+  for ( int i = 0; i < lights.length(); i++ )
+  {
+    vec3 radiance = lights[ i ].color;
+
+    vec3 L = -normalize( lights[ i ].direction );
+    vec3 H = normalize( V + L );
+
+    vec3 F = fresnelSchlick( H, V, F0 );
+    vec3 kS = F;
+    vec3 kD = vec3(1.0) - kS;
+    kD *= 1.0 - metallic;
+
+    float D = distributionGGX( N, H, roughness );
+    float G = geometrySmith( N, V, L, roughness );
+
+    vec3 num = D * F * G;
+    float denom = 4. * max( 0., dot( N, V ) ) * max( 0., dot( N, L ) );
+
+    vec3 specular = kS * (num / max( 0.001, denom ));
+
+    float NdotL = max( 0., dot( N, L ) );
+
+    Lo += ( kD * ( baseColor / PI ) + specular ) * radiance * NdotL;
+  }
+
   vec3 ambient = color_ambient.rgb;
-
-  vec3 kS = F;
-  vec3 kD = vec3(1.0) - kS;
-  kD *= 1.0 - metallic;
-
-  float D = distributionGGX( N, H, roughness );
-  float G = geometrySmith( N, V, L, roughness );
-
-  vec3 num = D * F * G;
-  float denom = 4. * max( 0., dot( N, V ) ) * max( 0., dot( N, L ) );
-
-  vec3 specular = kS * (num / max( 0.001, denom ));
-
-  float NdotL = max( 0., dot( N, L ) );
-
-  Lo += ( kD * ( baseColor / PI ) + specular ) * radiance * NdotL;
   Lo += ambient * ao;
-
   vec3 color = Lo;
 
   // tonemap and apply gamma correction
