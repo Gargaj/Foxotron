@@ -7,6 +7,7 @@ in vec2 out_texcoord;
 in vec3 out_worldpos;
 
 uniform float specular_shininess;
+uniform vec4 color_ambient;
 uniform vec4 color_diffuse;
 uniform vec4 color_specular;
 
@@ -58,7 +59,7 @@ void main(void)
 
   float ndotl = dot( normal, -normalize( light_direction ) );
 
-  vec3 color = ((has_tex_diffuse ? diffuse : color_diffuse.rgb) + color_specular.rgb * calculate_specular( normal ) * color_specular.a) * ndotl;
+  vec3 color = mix( ((has_tex_diffuse ? diffuse : color_diffuse.rgb) + color_specular.rgb * calculate_specular( normal ) * color_specular.a), color_ambient.rgb, ndotl );
 
   frag_color = vec4( pow( color, vec3(1.0f) ), 1.0f );
 }

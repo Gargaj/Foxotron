@@ -369,11 +369,16 @@ bool Geometry::LoadMesh( const char * _path )
 
     aiColor4D color;
 
-    material.mColorDiffuse = glm::vec4( 0.5f, 0.5f, 0.5f, 0.5f );
-    if ( aiGetMaterialColor( scene->mMaterials[ i ], AI_MATKEY_COLOR_DIFFUSE, &color ) == AI_SUCCESS )
-    {
-      memcpy( &material.mColorDiffuse.x, &color.r, sizeof( float ) * 4 );
-    }
+		material.mColorAmbient = glm::vec4( 0.0f, 0.0f, 0.0f, 0.0f );
+		if ( aiGetMaterialColor( scene->mMaterials[ i ], AI_MATKEY_COLOR_AMBIENT, &color ) == AI_SUCCESS )
+		{
+			memcpy( &material.mColorAmbient.x, &color.r, sizeof( float ) * 4 );
+		}
+		material.mColorDiffuse = glm::vec4( 0.5f, 0.5f, 0.5f, 0.5f );
+		if ( aiGetMaterialColor( scene->mMaterials[ i ], AI_MATKEY_COLOR_DIFFUSE, &color ) == AI_SUCCESS )
+		{
+			memcpy( &material.mColorDiffuse.x, &color.r, sizeof( float ) * 4 );
+		}
     material.mColorSpecular = glm::vec4( 1.0f, 1.0f, 1.0f, 1.0f );
     if ( aiGetMaterialColor( scene->mMaterials[ i ], AI_MATKEY_COLOR_SPECULAR, &color ) == AI_SUCCESS )
     {

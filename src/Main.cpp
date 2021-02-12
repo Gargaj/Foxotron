@@ -282,6 +282,7 @@ int main( int argc, const char * argv[] )
           {
             ImGui::Indent();
             ImGui::Text( "Specular shininess: %g", it->second.mSpecularShininess );
+            ImGui::ColorEdit4( "Ambient color", (float *) &it->second.mColorAmbient, ImGuiColorEditFlags_AlphaPreviewHalf );
             ImGui::ColorEdit4( "Diffuse color", (float *) &it->second.mColorDiffuse, ImGuiColorEditFlags_AlphaPreviewHalf );
             ImGui::ColorEdit4( "Specular color", (float *) &it->second.mColorSpecular, ImGuiColorEditFlags_AlphaPreviewHalf );
             if ( ImGui::BeginTabBar( it->second.mName.c_str() ) )
@@ -435,6 +436,7 @@ int main( int argc, const char * argv[] )
         const Geometry::Mesh & mesh = Geometry::mMeshes[ it->second.mMeshes[ i ] ];
         const Geometry::Material & material = Geometry::mMaterials[ mesh.mMaterialIndex ];
 
+        Renderer::SetShaderConstant( "color_ambient", material.mColorAmbient );
         Renderer::SetShaderConstant( "color_diffuse", material.mColorDiffuse );
         Renderer::SetShaderConstant( "color_specular", material.mColorSpecular );
         Renderer::SetShaderConstant( "specular_shininess", material.mSpecularShininess );

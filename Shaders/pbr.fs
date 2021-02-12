@@ -7,6 +7,7 @@ in vec2 out_texcoord;
 in vec3 out_worldpos;
 
 uniform float specular_shininess;
+uniform vec4 color_ambient;
 uniform vec4 color_diffuse;
 uniform vec4 color_specular;
 
@@ -123,7 +124,7 @@ void main(void)
   F0 = mix( F0, baseColor, metallic );
   vec3 F = fresnelSchlick( H, V, F0 );
   vec3 radiance = vec3(1.0);
-  vec3 ambient = vec3(0.01, 0.01, 0.02);
+  vec3 ambient = color_ambient.rgb;
 
   vec3 kS = F;
   vec3 kD = vec3(1.0) - kS;
