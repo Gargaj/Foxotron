@@ -325,7 +325,11 @@ bool Geometry::LoadMesh( const char * _path )
       material.mTextureDiffuse = LoadTexture( "diffuse", str, folder );
     }
     material.mTextureNormals = NULL;
-    if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_NORMALS, 0 ), &str ) == AI_SUCCESS )
+    if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_NORMAL_CAMERA, 0 ), &str ) == AI_SUCCESS )
+    {
+      material.mTextureNormals = LoadTexture( "normals", str, folder );
+    }
+    else if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_NORMALS, 0 ), &str ) == AI_SUCCESS )
     {
       material.mTextureNormals = LoadTexture( "normals", str, folder );
     }
