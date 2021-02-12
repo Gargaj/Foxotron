@@ -19,6 +19,7 @@ struct Shader
   const char * mVertexShaderPath;
   const char * mFragmentShaderPath;
 } gShaders[] = {
+  { "Physically Based", "Shaders/pbr.vs", "Shaders/pbr.fs" },
   { "Basic SpecGloss", "Shaders/basic_specgloss.vs", "Shaders/basic_specgloss.fs" },
   { NULL, NULL, NULL, },
 };
