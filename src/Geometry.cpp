@@ -56,7 +56,7 @@ void TransformBoundingBox( const glm::vec3 & inMin, const glm::vec3 & inMax, con
   outMax = glm::max( xa, xb ) + glm::max( ya, yb ) + glm::max( za, zb ) + glm::vec3( m[ 4 - 1 ][ 1 - 1 ], m[ 4 - 1 ][ 2 - 1 ], m[ 4 - 1 ][ 3 - 1 ] );
 }
 
-Renderer::Texture * LoadTexture( const char * _type, const aiString & _path, const std::string & _folder )
+Renderer::Texture * LoadTexture( const char * _type, const aiString & _path, const std::string & _folder, const bool _loadAsSRGB = false )
 {
   std::string filename( _path.data, _path.length );
 
@@ -78,7 +78,7 @@ Renderer::Texture * LoadTexture( const char * _type, const aiString & _path, con
 
   filename = _folder + filename;
 
-  texture = Renderer::CreateRGBA8TextureFromFile( filename.c_str() );
+  texture = Renderer::CreateRGBA8TextureFromFile( filename.c_str(), _loadAsSRGB );
   if ( texture )
   {
     return texture;
@@ -322,7 +322,7 @@ bool Geometry::LoadMesh( const char * _path )
     material.mTextureDiffuse = NULL;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_DIFFUSE, 0 ), &str ) == AI_SUCCESS )
     {
-      material.mTextureDiffuse = LoadTexture( "diffuse", str, folder );
+      material.mTextureDiffuse = LoadTexture( "diffuse", str, folder, true );
     }
     material.mTextureNormals = NULL;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_NORMAL_CAMERA, 0 ), &str ) == AI_SUCCESS )
@@ -341,7 +341,7 @@ bool Geometry::LoadMesh( const char * _path )
     material.mTextureAlbedo = NULL;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_BASE_COLOR, 0 ), &str ) == AI_SUCCESS )
     {
-      material.mTextureAlbedo = LoadTexture( "albedo", str, folder );
+      material.mTextureAlbedo = LoadTexture( "albedo", str, folder, true );
     }
     material.mTextureRoughness = NULL;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_DIFFUSE_ROUGHNESS, 0 ), &str ) == AI_SUCCESS )

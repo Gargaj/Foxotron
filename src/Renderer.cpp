@@ -362,38 +362,13 @@ void SetShaderConstant( const char * szConstName, const glm::mat4x4 & matrix )
 
 int textureUnit = 0;
 
-Texture * CreateRGBA8Texture()
-{
-  void * data = NULL;
-  GLenum internalFormat = GL_SRGB8_ALPHA8;
-  GLenum srcFormat = GL_FLOAT;
-  GLenum format = GL_UNSIGNED_BYTE;
-
-  GLuint glTexId = 0;
-  glGenTextures( 1, &glTexId );
-  glBindTexture( GL_TEXTURE_2D, glTexId );
-
-  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
-  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-
-  Texture * tex = new Texture();
-  tex->mWidth = nWidth;
-  tex->mHeight = nHeight;
-  tex->mGLTextureID = glTexId;
-  tex->mType = TEXTURETYPE_2D;
-  tex->mGLTextureUnit = textureUnit++;
-  return tex;
-}
-
-Texture * CreateRGBA8TextureFromFile( const char * szFilename )
+Texture * CreateRGBA8TextureFromFile( const char * szFilename, const bool _loadAsSRGB /*= false*/ )
 {
   int comp = 0;
   int width = 0;
   int height = 0;
   void * data = NULL;
-  GLenum internalFormat = GL_RGBA8;
+  GLenum internalFormat = _loadAsSRGB ? GL_SRGB8_ALPHA8 : GL_RGBA8;
   GLenum srcFormat = GL_RGBA;
   GLenum format = GL_UNSIGNED_BYTE;
   if ( stbi_is_hdr( szFilename ) )
@@ -431,35 +406,6 @@ Texture * CreateRGBA8TextureFromFile( const char * szFilename )
   return tex;
 }
 
-Texture * Create1DR32Texture( int w )
-{
-  GLuint glTexId = 0;
-  glGenTextures( 1, &glTexId );
-  glBindTexture( GL_TEXTURE_1D, glTexId );
-
-  glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-  glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-  glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-
-  float * data = new float[ w ];
-  for ( int i = 0; i < w; ++i )
-    data[ i ] = 0.0f;
-
-  glTexImage1D( GL_TEXTURE_1D, 0, GL_R32F, w, 0, GL_RED, GL_FLOAT, data );
-
-  delete[] data;
-
-  glBindTexture( GL_TEXTURE_1D, 0 );
-
-  Texture * tex = new Texture();
-  tex->mWidth = w;
-  tex->mHeight = 1;
-  tex->mGLTextureID = glTexId;
-  tex->mType = TEXTURETYPE_1D;
-  tex->mGLTextureUnit = textureUnit++;
-  return tex;
-}
-
 void SetShaderTexture( const char * szTextureName, Texture * tex )
 {
   if ( !tex )
@@ -478,35 +424,6 @@ void SetShaderTexture( const char * szTextureName, Texture * tex )
   }
 }
 
-bool UpdateR32Texture( Texture * tex, float * data )
-{
-  glActiveTexture( GL_TEXTURE0 + ( (Texture *) tex )->mGLTextureUnit );
-  glBindTexture( GL_TEXTURE_1D, ( (Texture *) tex )->mGLTextureID );
-  glTexSubImage1D( GL_TEXTURE_1D, 0, 0, tex->mWidth, GL_RED, GL_FLOAT, data );
-
-  return true;
-}
-
-Texture * CreateA8TextureFromData( int w, int h, const unsigned char * data )
-{
-  GLuint glTexId = 0;
-  glGenTextures( 1, &glTexId );
-  glBindTexture( GL_TEXTURE_2D, glTexId );
-  unsigned int * p32bitData = new unsigned int[ w * h ];
-  for ( int i = 0; i < w * h; i++ ) p32bitData[ i ] = ( data[ i ] << 24 ) | 0xFFFFFF;
-  glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, p32bitData );
-  delete[] p32bitData;
-
-  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-
-  Texture * tex = new Texture();
-  tex->mWidth = w;
-  tex->mHeight = h;
-  tex->mGLTextureID = glTexId;
-  tex->mType = TEXTURETYPE_2D;
-  tex->mGLTextureUnit = 0; // this is always 0 cos we're not using shaders here
-  return tex;
-}
 
 void ReleaseTexture( Texture * tex )
 {

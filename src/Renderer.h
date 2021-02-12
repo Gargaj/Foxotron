@@ -62,11 +62,7 @@ struct Texture
   int mGLTextureUnit;
 };
 
-Texture * CreateRGBA8Texture();
-Texture * CreateRGBA8TextureFromFile( const char * szFilename );
-Texture * CreateA8TextureFromData( int w, int h, const unsigned char * data );
-Texture * Create1DR32Texture( int w );
-bool UpdateR32Texture( Texture * tex, float * data );
+Texture * CreateRGBA8TextureFromFile( const char * szFilename, const bool _loadAsSRGB = false );
 void SetShaderTexture( const char * szTextureName, Texture * tex );
 void ReleaseTexture( Texture * tex );
 
