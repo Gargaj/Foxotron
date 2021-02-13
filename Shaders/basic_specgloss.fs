@@ -34,10 +34,10 @@ uniform bool has_tex_ao;
 
 out vec4 frag_color;
 
-float calculate_specular( vec3 normal )
+float calculate_specular( vec3 normal, vec3 light_direction )
 {
   vec3 V = normalize( camera_position - out_worldpos );
-  vec3 L = -normalize( lights[ 0 ].direction );
+  vec3 L = -normalize( light_direction );
   vec3 H = normalize( V + L );
   float rdotv = clamp( dot( normal, H ), 0.0, 1.0 );
   float total_specular = pow( rdotv, specular_shininess );
@@ -63,9 +63,16 @@ void main(void)
 
   normal = normalize( normal );
 
-  float ndotl = dot( normal, -normalize( lights[ 0 ].direction ) );
+  vec3 color = color_ambient.rgb;
+  for ( int i = 0; i < lights.length(); i++ )
+  {
+    float ndotl = dot( normal, -normalize( lights[ i ].direction ) );
 
-  vec3 color = mix( ((has_tex_diffuse ? diffuse : color_diffuse.rgb) + color_specular.rgb * calculate_specular( normal ) * color_specular.a), color_ambient.rgb, ndotl );
+    vec3 diffuse = has_tex_diffuse ? diffuse : color_diffuse.rgb;
+    vec3 specular = color_specular.rgb * calculate_specular( normal, lights[ i ].direction ) * color_specular.a;
+    
+    color += (diffuse + specular) * ndotl * lights[ i ].color;
+  }
 
-  frag_color = vec4( pow( color, vec3(1.0f) ), 1.0f );
+  frag_color = vec4( pow( color, vec3(1. / 2.2) ), 1.0f );
 }
