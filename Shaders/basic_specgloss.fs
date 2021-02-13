@@ -66,7 +66,7 @@ void main(void)
   vec3 color = color_ambient.rgb;
   for ( int i = 0; i < lights.length(); i++ )
   {
-    float ndotl = dot( normal, -normalize( lights[ i ].direction ) );
+    float ndotl = clamp( dot( normal, -normalize( lights[ i ].direction ) ), 0.0, 1.0 );
 
     vec3 diffuse = has_tex_diffuse ? diffuse : color_diffuse.rgb;
     vec3 specular = color_specular.rgb * calculate_specular( normal, lights[ i ].direction ) * color_specular.a;
