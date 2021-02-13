@@ -199,7 +199,7 @@ int main( int argc, const char * argv[] )
   float lightPitch = 0.0f;
   float mouseClickPosX = 0.0f;
   float mouseClickPosY = 0.0f;
-  glm::vec4 clearColor( 0.08f, 0.18f, 0.18f, 1.0f );
+  glm::vec4 clearColor( 0.5f, 0.5f, 0.5f, 1.0f );
   std::string supportedExtensions = Geometry::GetSupportedExtensions();
   float skysphereOpacity = 1.0f;
   float skysphereBlur = 0.75f;
@@ -500,6 +500,7 @@ int main( int argc, const char * argv[] )
         skysphereShader->SetTexture( "tex_skysphere", gSkySphereTexture );
       }
 
+      skysphereShader->SetConstant( "background_color", clearColor );
       skysphereShader->SetConstant( "skysphere_blur", skysphereBlur );
       skysphereShader->SetConstant( "skysphere_opacity", skysphereOpacity );
       skysphereShader->SetConstant( "skysphere_rotation", -lightYaw );

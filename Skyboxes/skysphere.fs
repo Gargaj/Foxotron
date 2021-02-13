@@ -7,6 +7,7 @@ uniform sampler2D tex_skysphere;
 uniform float skysphere_rotation;
 uniform float skysphere_blur;
 uniform float skysphere_opacity;
+uniform vec4 background_color;
 
 out vec4 frag_color;
 
@@ -22,6 +23,5 @@ void main(void)
 {
   vec3 sky_color = textureLod( tex_skysphere, sphere_to_polar( normalize( out_worldpos * vec3( 1.0,-1.0,-1.0) ) ), skysphere_blur ).rgb;
 
-  vec3 gray = vec3(0.5);
-  frag_color = vec4( mix(gray,sky_color,skysphere_opacity), 1.0f );
+  frag_color = vec4( mix( background_color.rgb, sky_color, skysphere_opacity ), 1.0f );
 }
