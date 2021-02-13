@@ -16,3 +16,6 @@
 [submodule "externals/imgui-addons"]
 	path = externals/imgui-addons
 	url = https://github.com/gallickgunner/ImGui-Addons.git
+[submodule "externals/jsonxx"]
+	path = externals/jsonxx
+	url = https://github.com/hjiang/jsonxx.git

@@ -13,26 +13,7 @@
 #include "ext.hpp"
 #include "gtx/rotate_vector.hpp"
 
-struct ShaderConfig
-{
-  const char * mName;
-  const char * mVertexShaderPath;
-  const char * mFragmentShaderPath;
-  bool mSkysphereVisible;
-} gShaders[] = {
-  { "Physically Based",              "Shaders/pbr.vs",                 "Shaders/pbr.fs"            ,     false },
-  { "Basic SpecGloss",               "Shaders/basic_specgloss.vs",     "Shaders/basic_specgloss.fs",     false },
-  { NULL, NULL, NULL, },
-};
-
-const char * skyboxFilenames[] =
-{
-  "Skyboxes/Barce_Rooftop_C_3k.hdr",
-  "Skyboxes/GCanyon_C_YumaPoint_3k.hdr",
-  "Skyboxes/Ridgecrest_Road_Ref.hdr",
-  "Skyboxes/Road_to_MonumentValley_Ref.hdr",
-  NULL
-};
+#include <jsonxx.h>
 
 Renderer::Shader * LoadShader( const char * vsPath, const char * fsPath )
 {
@@ -41,7 +22,7 @@ Renderer::Shader * LoadShader( const char * vsPath, const char * fsPath )
   if ( !fileVS )
   {
     printf( "Vertex shader load failed: '%s'\n", vsPath );
-    return false;
+    return NULL;
   }
   fread( vertexShader, 1, 16 * 1024, fileVS );
   fclose( fileVS );
@@ -51,7 +32,7 @@ Renderer::Shader * LoadShader( const char * vsPath, const char * fsPath )
   if ( !fileFS )
   {
     printf( "Fragment shader load failed: '%s'\n", fsPath );
-    return false;
+    return NULL;
   }
   fread( fragmentShader, 1, 16 * 1024, fileFS );
   fclose( fileFS );
@@ -66,17 +47,17 @@ Renderer::Shader * LoadShader( const char * vsPath, const char * fsPath )
   return shader;
 }
 
-ShaderConfig * gCurrentShaderConfig = NULL;
+const jsonxx::Object * gCurrentShaderConfig = NULL;
 Renderer::Shader * gCurrentShader = NULL;
-bool LoadShaderConfig( ShaderConfig * shader )
+bool LoadShaderConfig( const jsonxx::Object * _shader )
 {
-  Renderer::Shader * newShader = LoadShader( shader->mVertexShaderPath, shader->mFragmentShaderPath );
+  Renderer::Shader * newShader = LoadShader( _shader->get<jsonxx::String>( "vertexShader" ).c_str(), _shader->get<jsonxx::String>( "fragmentShader" ).c_str() );
   if ( !newShader )
   {
     return false;
   }
 
-  gCurrentShaderConfig = shader;
+  gCurrentShaderConfig = _shader;
 
   if ( gCurrentShader )
   {
@@ -137,7 +118,7 @@ void ShowMaterialInImGui( const char * _channel, Renderer::Texture * _texture )
   {
     ImGui::Text( "Texture: %s", _texture->mFilename.c_str() );
     ImGui::Text( "Dimensions: %d x %d", _texture->mWidth, _texture->mHeight );
-    ImGui::Image( (ImTextureID) _texture->mGLTextureID, ImVec2( 512.0f, 512.0f ) );
+    ImGui::Image( (void *) (intptr_t) _texture->mGLTextureID, ImVec2( 512.0f, 512.0f ) );
     ImGui::EndTabItem();
   }
 }
@@ -146,6 +127,26 @@ Renderer::Texture * gSkySphereTexture = NULL;
 
 int main( int argc, const char * argv[] )
 {
+  jsonxx::Object options;
+  FILE * configFile = fopen( "config.json", "rb" );
+  if ( !configFile )
+  {
+    printf( "Config file not found!\n" );
+    return -10;
+  }
+
+  char configData[ 65535 ];
+  memset( configData, 0, 65535 );
+  fread( configData, 1, 65535, configFile );
+  fclose( configFile );
+
+  options.parse( configData );
+  if ( !options.has<jsonxx::Array>( "shaders" ) || !options.has<jsonxx::Array>( "skySphereTextures" ) )
+  {
+    printf( "Config file broken!\n" );
+    return -11;
+  }
+
   //////////////////////////////////////////////////////////////////////////
   // Init renderer
   RENDERER_SETTINGS settings;
@@ -174,7 +175,7 @@ int main( int argc, const char * argv[] )
 
   //////////////////////////////////////////////////////////////////////////
   // Bootstrap
-  if ( !LoadShaderConfig( &gShaders[ 0 ] ) )
+  if ( !LoadShaderConfig( &options.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( 0 ) ) )
   {
     return -4;
   }
@@ -210,7 +211,7 @@ int main( int argc, const char * argv[] )
     0.0f,-1.0f, 0.0f, 0.0f,
     0.0f, 0.0f, 0.0f, 1.0f );
 
-  gSkySphereTexture = Renderer::CreateRGBA8TextureFromFile( skyboxFilenames[ 0 ] );
+  gSkySphereTexture = Renderer::CreateRGBA8TextureFromFile( options.get<jsonxx::Array>( "skySphereTextures" ).get<jsonxx::String>( 0 ).c_str() );
 
   Geometry skysphere;
   skysphere.LoadMesh( "Skyboxes/skysphere.fbx" );
@@ -277,22 +278,27 @@ int main( int argc, const char * argv[] )
       }
       if ( ImGui::BeginMenu( "Shaders" ) )
       {
-        for ( int i = 0; gShaders[ i ].mName; i++ )
+        for ( int i = 0; i< options.get<jsonxx::Array>( "shaders" ).size(); i++ )
         {
-          bool selected = &gShaders[ i ] == gCurrentShaderConfig;
-          if ( ImGui::MenuItem( gShaders[ i ].mName, NULL, &selected ) )
+          const jsonxx::Object & shaderConfig = options.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( i );
+          const std::string & name = options.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( i ).get<jsonxx::String>( "name" );
+
+          bool selected = &shaderConfig == gCurrentShaderConfig;
+          if ( ImGui::MenuItem( name.c_str(), NULL, &selected ) )
           {
-            LoadShaderConfig( &gShaders[ i ] );
+            LoadShaderConfig( &shaderConfig );
           }
           gModel.RebindVertexArray( gCurrentShader );
         }
-        if ( gCurrentShaderConfig && gCurrentShaderConfig->mSkysphereVisible )
+        if ( gCurrentShaderConfig && gCurrentShaderConfig->get<jsonxx::Boolean>("showSkybox") )
         {
           ImGui::Separator();
-          for ( int i = 0; skyboxFilenames[ i ]; i++ )
+          for ( int i = 0; i < options.get<jsonxx::Array>( "skySphereTextures" ).size(); i++ )
           {
-            bool selected = ( gSkySphereTexture && gSkySphereTexture->mFilename == skyboxFilenames[ i ] );
-            if ( ImGui::MenuItem( skyboxFilenames[ i ], NULL, &selected ) )
+            const std::string & filename = options.get<jsonxx::Array>( "skySphereTextures" ).get<jsonxx::String>( i );
+
+            bool selected = ( gSkySphereTexture && gSkySphereTexture->mFilename == filename );
+            if ( ImGui::MenuItem( filename.c_str(), NULL, &selected ) )
             {
               if ( gSkySphereTexture )
               {
@@ -301,7 +307,7 @@ int main( int argc, const char * argv[] )
 
                 gSkySphereTexture = NULL;
               }
-              gSkySphereTexture = Renderer::CreateRGBA8TextureFromFile( skyboxFilenames[ i ] );
+              gSkySphereTexture = Renderer::CreateRGBA8TextureFromFile( filename.c_str() );
             }
           }
         }
@@ -479,7 +485,7 @@ int main( int argc, const char * argv[] )
     cameraPosition = glm::rotateY( cameraPosition, cameraYaw );
 
     static glm::mat4x4 worldRootXYZ( 1.0f );
-    if ( gCurrentShaderConfig->mSkysphereVisible )
+    if ( gCurrentShaderConfig->get<jsonxx::Boolean>( "showSkybox" ) )
     {
       float verticalFovInRadian = 0.5f;
       projectionMatrix = glm::perspective( verticalFovInRadian, settings.nWidth / (float) settings.nHeight, 0.001f, 2.0f );

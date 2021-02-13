@@ -66,6 +66,19 @@ set(FXTRN_PROJECT_INCLUDES ${FXTRN_PROJECT_INCLUDES} ${CMAKE_SOURCE_DIR}/externa
 set(FXTRN_PROJECT_LIBS ${FXTRN_PROJECT_LIBS} glm)
 
 ##############################################################################
+# JSONXX
+set(JSONXX_SRCS
+  ${CMAKE_SOURCE_DIR}/externals/jsonxx/jsonxx.cc
+)
+add_library(FXTRN_jsonxx STATIC ${JSONXX_SRCS})
+target_include_directories(FXTRN_jsonxx PUBLIC ${CMAKE_SOURCE_DIR}/externals/jsonxx)
+if (MSVC)
+  target_compile_options(FXTRN_jsonxx PUBLIC "$<$<CONFIG:Release>:/MT>")
+endif ()
+set(FXTRN_PROJECT_INCLUDES ${FXTRN_PROJECT_INCLUDES} ${CMAKE_SOURCE_DIR}/externals/jsonxx)
+set(FXTRN_PROJECT_LIBS ${FXTRN_PROJECT_LIBS} FXTRN_jsonxx)
+
+##############################################################################
 # GLFW
 # GLFW settings and project inclusion
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)

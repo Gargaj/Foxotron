@@ -1,0 +1,22 @@
+{
+  "shaders":[
+    {
+      "name": "Physically Based",
+      "vertexShader": "Shaders/pbr.vs",
+      "fragmentShader": "Shaders/pbr.fs",
+      "showSkybox": false
+    },
+    {
+      "name": "Basic SpecGloss",
+      "vertexShader": "Shaders/basic_specgloss.vs",
+      "fragmentShader": "Shaders/basic_specgloss.fs",
+      "showSkybox": false
+    }
+  ],
+  "skySphereTextures":[
+    "Skyboxes/Barce_Rooftop_C_3k.hdr",
+    "Skyboxes/GCanyon_C_YumaPoint_3k.hdr",
+    "Skyboxes/Ridgecrest_Road_Ref.hdr",
+    "Skyboxes/Road_to_MonumentValley_Ref.hdr"
+  ],
+}

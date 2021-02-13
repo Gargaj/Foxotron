@@ -241,6 +241,7 @@ Shader * CreateShader( const char * szVertexShaderCode, int nVertexShaderCodeSiz
   {
     glDeleteShader( shader->mVertexShader );
     glDeleteProgram( shader->mProgram );
+    delete shader;
     return NULL;
   }
 
@@ -257,6 +258,7 @@ Shader * CreateShader( const char * szVertexShaderCode, int nVertexShaderCodeSiz
     glDeleteShader( shader->mVertexShader );
     glDeleteShader( shader->mFragmentShader );
     glDeleteProgram( shader->mProgram );
+    delete shader;
     return NULL;
   }
 
@@ -272,7 +274,8 @@ Shader * CreateShader( const char * szVertexShaderCode, int nVertexShaderCodeSiz
     glDeleteShader( shader->mVertexShader );
     glDeleteShader( shader->mFragmentShader );
     glDeleteProgram( shader->mProgram );
-    return false;
+    delete shader;
+    return NULL;
   }
 
   return shader;
