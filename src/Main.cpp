@@ -420,7 +420,7 @@ int main( int argc, const char * argv[] )
               }
               if ( movingLight )
               {
-                lightYaw -= ( mouseEvent.x - mouseClickPosX ) / rotationSpeed;
+                lightYaw += ( mouseEvent.x - mouseClickPosX ) / rotationSpeed;
                 lightPitch -= ( mouseEvent.y - mouseClickPosY ) / rotationSpeed;
 
                 // Clamp to avoid gimbal lock
@@ -502,7 +502,7 @@ int main( int argc, const char * argv[] )
 
       skysphereShader->SetConstant( "skysphere_blur", skysphereBlur );
       skysphereShader->SetConstant( "skysphere_opacity", skysphereOpacity );
-      skysphereShader->SetConstant( "skysphere_rotation", lightYaw );
+      skysphereShader->SetConstant( "skysphere_rotation", -lightYaw );
 
       skysphere.Render( worldRootXYZ, skysphereShader );
     }
@@ -532,7 +532,7 @@ int main( int argc, const char * argv[] )
     gCurrentShader->SetConstant( "lights[2].direction", -fillLightDirection );
     gCurrentShader->SetConstant( "lights[2].color", glm::vec3( 0.25f ) );
 
-    gCurrentShader->SetConstant( "skysphere_rotation", lightYaw );
+    gCurrentShader->SetConstant( "skysphere_rotation", -lightYaw );
 
     viewMatrix = glm::lookAtRH( cameraPosition + gCameraTarget, gCameraTarget, glm::vec3( 0.0f, 1.0f, 0.0f ) );
     gCurrentShader->SetConstant( "mat_view", viewMatrix );
