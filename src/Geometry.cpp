@@ -33,13 +33,6 @@ struct Vertex
 };
 #pragma pack()
 
-std::map<int, Geometry::Node> Geometry::mNodes;
-std::map<int, Geometry::Mesh> Geometry::mMeshes;
-std::map<int, Geometry::Material> Geometry::mMaterials;
-glm::mat4x4 * Geometry::mMatrices = NULL;
-glm::vec3 Geometry::mAABBMin;
-glm::vec3 Geometry::mAABBMax;
-
 // Transform an AABB into an OBB, and return its AABB
 void TransformBoundingBox( const glm::vec3 & inMin, const glm::vec3 & inMax, const glm::mat4x4 & m, glm::vec3 & outMin, glm::vec3 & outMax )
 {
@@ -89,7 +82,7 @@ Renderer::Texture * LoadTexture( const char * _type, const aiString & _path, con
 }
 
 int gNodeCount = 0;
-void ParseNode( const aiScene * scene, aiNode * sceneNode, int nParentIndex )
+void ParseNode( Geometry * _geometry, const aiScene * scene, aiNode * sceneNode, int nParentIndex )
 {
   Geometry::Node node;
   node.mID = gNodeCount++;
@@ -104,11 +97,11 @@ void ParseNode( const aiScene * scene, aiNode * sceneNode, int nParentIndex )
   aiMatrix4x4 m = sceneNode->mTransformation.Transpose();
   memcpy( &node.mTransformation, &m.a1, sizeof( float ) * 16 );
 
-  Geometry::mNodes.insert( { node.mID, node } );
+  _geometry->mNodes.insert( { node.mID, node } );
 
   for ( unsigned int i = 0; i < sceneNode->mNumChildren; i++ )
   {
-    ParseNode( scene, sceneNode->mChildren[ i ], node.mID );
+    ParseNode( _geometry, scene, sceneNode->mChildren[ i ], node.mID );
   }
 }
 
@@ -120,6 +113,18 @@ public:
     printf( "[assimp] %s", message );
   }
 };
+
+Geometry::Geometry()
+  : mMatrices( NULL )
+  , mAABBMin( 0.0f )
+  , mAABBMax( 0.0f )
+{
+}
+
+Geometry::~Geometry()
+{
+  UnloadMesh();
+}
 
 bool Geometry::LoadMesh( const char * _path )
 {
@@ -162,20 +167,20 @@ bool Geometry::LoadMesh( const char * _path )
   Assimp::DefaultLogger::kill();
 
   gNodeCount = 0;
-  ParseNode( scene, scene->mRootNode, -1 );
+  ParseNode( this, scene, scene->mRootNode, -1 );
 
-  mMatrices = Geometry::mNodes.size() ? new glm::mat4x4[ Geometry::mNodes.size() ] : nullptr;
+  mMatrices = mNodes.size() ? new glm::mat4x4[ mNodes.size() ] : nullptr;
 
   //////////////////////////////////////////////////////////////////////////
   // Calculate node transforms
   if ( mMatrices )
   {
-    for ( std::map<int, Geometry::Node>::iterator it = Geometry::mNodes.begin(); it != Geometry::mNodes.end(); it++ )
+    for ( std::map<int, Geometry::Node>::iterator it = mNodes.begin(); it != mNodes.end(); it++ )
     {
       const Geometry::Node & node = it->second;
 
       glm::mat4x4 matParent;
-      if ( node.mParentID == -1 || !Geometry::mMatrices )
+      if ( node.mParentID == -1 || !mMatrices )
       {
         matParent = glm::mat4x4( 1.0f );
       }
@@ -280,23 +285,21 @@ bool Geometry::LoadMesh( const char * _path )
 
     mesh.mMaterialIndex = sceneMesh->mMaterialIndex;
 
-    Renderer::RebindVertexArray();
-
     mMeshes.insert( { i, mesh } );
   }
 
   printf( "[geometry] Calculating AABB\n" );
   bool aabbSet = false;
-  for ( std::map<int, Geometry::Node>::iterator it = Geometry::mNodes.begin(); it != Geometry::mNodes.end(); it++ )
+  for ( std::map<int, Geometry::Node>::iterator it = mNodes.begin(); it != mNodes.end(); it++ )
   {
     const Geometry::Node & node = it->second;
     for ( int i = 0; i < it->second.mMeshes.size(); i++ )
     {
-      const Geometry::Mesh & mesh = Geometry::mMeshes[ it->second.mMeshes[ i ] ];
+      const Geometry::Mesh & mesh = mMeshes[ it->second.mMeshes[ i ] ];
 
       glm::vec3 aabbMin;
       glm::vec3 aabbMax;
-      TransformBoundingBox( mesh.mAABBMin, mesh.mAABBMax, Geometry::mMatrices[ node.mID ], aabbMin, aabbMax );
+      TransformBoundingBox( mesh.mAABBMin, mesh.mAABBMax, mMatrices[ node.mID ], aabbMin, aabbMax );
 
       if ( !aabbSet )
       {
@@ -444,6 +447,103 @@ void Geometry::UnloadMesh()
   mMeshes.clear();
 
   gImporter.FreeScene();
+}
+
+void Geometry::Render( const glm::mat4x4 & _worldRootMatrix, Renderer::Shader * _shader )
+{
+  Renderer::SetShader( _shader );
+
+  for ( std::map<int, Geometry::Node>::iterator it = mNodes.begin(); it != mNodes.end(); it++ )
+  {
+    const Geometry::Node & node = it->second;
+
+    _shader->SetConstant( "mat_world", mMatrices[ node.mID ] * _worldRootMatrix );
+
+    for ( int i = 0; i < it->second.mMeshes.size(); i++ )
+    {
+      const Geometry::Mesh & mesh = mMeshes[ it->second.mMeshes[ i ] ];
+      const Geometry::Material & material = mMaterials[ mesh.mMaterialIndex ];
+
+      _shader->SetConstant( "color_ambient", material.mColorAmbient );
+      _shader->SetConstant( "color_diffuse", material.mColorDiffuse );
+      _shader->SetConstant( "color_specular", material.mColorSpecular );
+      _shader->SetConstant( "specular_shininess", material.mSpecularShininess );
+
+      _shader->SetConstant( "has_tex_diffuse", material.mTextureDiffuse != NULL );
+      _shader->SetConstant( "has_tex_normals", material.mTextureNormals != NULL );
+      _shader->SetConstant( "has_tex_specular", material.mTextureSpecular != NULL );
+      _shader->SetConstant( "has_tex_albedo", material.mTextureAlbedo != NULL );
+      _shader->SetConstant( "has_tex_roughness", material.mTextureRoughness != NULL );
+      _shader->SetConstant( "has_tex_metallic", material.mTextureMetallic != NULL );
+      _shader->SetConstant( "has_tex_ao", material.mTextureAO != NULL );
+
+      if ( material.mTextureDiffuse )
+      {
+        _shader->SetTexture( "tex_diffuse", material.mTextureDiffuse );
+      }
+      if ( material.mTextureNormals )
+      {
+        _shader->SetTexture( "tex_normals", material.mTextureNormals );
+      }
+      if ( material.mTextureSpecular )
+      {
+        _shader->SetTexture( "tex_specular", material.mTextureSpecular );
+      }
+      if ( material.mTextureAlbedo )
+      {
+        _shader->SetTexture( "tex_albedo", material.mTextureAlbedo );
+      }
+      if ( material.mTextureRoughness )
+      {
+        _shader->SetTexture( "tex_roughness", material.mTextureRoughness );
+      }
+      if ( material.mTextureMetallic )
+      {
+        _shader->SetTexture( "tex_metallic", material.mTextureMetallic );
+      }
+      if ( material.mTextureAO )
+      {
+        _shader->SetTexture( "tex_ao", material.mTextureAO );
+      }
+
+      glBindVertexArray( mesh.mVertexArrayObject );
+
+      glDrawElements( GL_TRIANGLES, mesh.mTriangleCount * 3, GL_UNSIGNED_INT, NULL );
+    }
+  }
+}
+
+void Geometry::__SetupVertexArray( Renderer::Shader * _shader, const char * name, int sizeInFloats, int & offsetInFloats )
+{
+  unsigned int stride = sizeof( float ) * 14;
+
+  GLint location = glGetAttribLocation( _shader->mProgram, name );
+  if ( location >= 0 )
+  {
+    glVertexAttribPointer( location, sizeInFloats, GL_FLOAT, GL_FALSE, stride, (GLvoid *) ( offsetInFloats * sizeof( GLfloat ) ) );
+    glEnableVertexAttribArray( location );
+  }
+
+  offsetInFloats += sizeInFloats;
+}
+
+void Geometry::RebindVertexArray( Renderer::Shader * _shader )
+{
+  for ( int i = 0; i < mMeshes.size(); i++ )
+  {
+    const Geometry::Mesh & mesh = mMeshes[ i ];
+
+    glBindVertexArray( mesh.mVertexArrayObject );
+    glBindBuffer( GL_ARRAY_BUFFER, mesh.mVertexBufferObject );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, mesh.mIndexBufferObject );
+
+    int offset = 0;
+    __SetupVertexArray( _shader, "in_pos", 3, offset );
+    __SetupVertexArray( _shader, "in_normal", 3, offset );
+    __SetupVertexArray( _shader, "in_tangent", 3, offset );
+    __SetupVertexArray( _shader, "in_binormal", 3, offset );
+    __SetupVertexArray( _shader, "in_texcoord", 2, offset );
+  }
 }
 
 std::string Geometry::GetSupportedExtensions()

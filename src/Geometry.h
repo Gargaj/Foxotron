@@ -10,53 +10,63 @@
 #include <GL/wGLew.h>
 #endif
 
-namespace Geometry
+class Geometry
 {
-struct Node
-{
-  unsigned int mID;
-  std::string mName;
-  std::vector<unsigned int> mMeshes;
-  unsigned int mParentID;
-  glm::mat4x4 mTransformation;
-};
-struct Mesh
-{
-  int mVertexCount;
-  GLuint mVertexBufferObject;
-  int mTriangleCount;
-  GLuint mIndexBufferObject;
-  int mMaterialIndex;
-  GLuint mVertexArrayObject;
+public:
+  struct Node
+  {
+    unsigned int mID;
+    std::string mName;
+    std::vector<unsigned int> mMeshes;
+    unsigned int mParentID;
+    glm::mat4x4 mTransformation;
+  };
+  struct Mesh
+  {
+    int mVertexCount;
+    GLuint mVertexBufferObject;
+    int mTriangleCount;
+    GLuint mIndexBufferObject;
+    int mMaterialIndex;
+    GLuint mVertexArrayObject;
 
+    glm::vec3 mAABBMin;
+    glm::vec3 mAABBMax;
+  };
+  struct Material
+  {
+    std::string mName;
+    Renderer::Texture * mTextureDiffuse;
+    Renderer::Texture * mTextureNormals;
+    Renderer::Texture * mTextureSpecular;
+    Renderer::Texture * mTextureAlbedo;
+    Renderer::Texture * mTextureRoughness;
+    Renderer::Texture * mTextureMetallic;
+    Renderer::Texture * mTextureAO;
+    glm::vec4 mColorAmbient;
+    glm::vec4 mColorDiffuse;
+    glm::vec4 mColorSpecular;
+
+    float mSpecularShininess;
+  };
+
+  Geometry();
+  ~Geometry();
+
+  bool LoadMesh( const char * _path );
+  void UnloadMesh();
+
+  void Render( const glm::mat4x4 & _worldRootMatrix, Renderer::Shader * _shader );
+
+  void __SetupVertexArray( Renderer::Shader * _shader, const char * name, int sizeInFloats, int & offsetInFloats);
+  void RebindVertexArray( Renderer::Shader * _shader );
+
+  static std::string GetSupportedExtensions();
+
+  std::map<int, Node> mNodes;
+  std::map<int, Mesh> mMeshes;
+  std::map<int, Material> mMaterials;
+  glm::mat4x4 * mMatrices;
   glm::vec3 mAABBMin;
   glm::vec3 mAABBMax;
 };
-struct Material
-{
-  std::string mName;
-  Renderer::Texture * mTextureDiffuse;
-  Renderer::Texture * mTextureNormals;
-  Renderer::Texture * mTextureSpecular;
-  Renderer::Texture * mTextureAlbedo;
-  Renderer::Texture * mTextureRoughness;
-  Renderer::Texture * mTextureMetallic;
-  Renderer::Texture * mTextureAO;
-  glm::vec4 mColorAmbient;
-  glm::vec4 mColorDiffuse;
-  glm::vec4 mColorSpecular;
-
-  float mSpecularShininess;
-};
-
-bool LoadMesh( const char * _path );
-void UnloadMesh();
-std::string GetSupportedExtensions();
-
-extern std::map<int, Node> mNodes;
-extern std::map<int, Mesh> mMeshes;
-extern std::map<int, Material> mMaterials;
-extern glm::mat4x4 * mMatrices;
-extern glm::vec3 mAABBMin;
-extern glm::vec3 mAABBMax;
-}

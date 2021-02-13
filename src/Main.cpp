@@ -13,71 +13,103 @@
 #include "ext.hpp"
 #include "gtx/rotate_vector.hpp"
 
-struct Shader
+struct ShaderConfig
 {
   const char * mName;
   const char * mVertexShaderPath;
   const char * mFragmentShaderPath;
+  bool mSkysphereVisible;
 } gShaders[] = {
-  { "Physically Based", "Shaders/pbr.vs", "Shaders/pbr.fs" },
-  { "Basic SpecGloss", "Shaders/basic_specgloss.vs", "Shaders/basic_specgloss.fs" },
+  { "Physically Based",              "Shaders/pbr.vs",                 "Shaders/pbr.fs"            ,     false },
+  { "Basic SpecGloss",               "Shaders/basic_specgloss.vs",     "Shaders/basic_specgloss.fs",     false },
   { NULL, NULL, NULL, },
 };
 
-Shader * gCurrentShader = NULL;
-bool LoadShader( Shader * shader )
+const char * skyboxFilenames[] =
+{
+  "Skyboxes/Barce_Rooftop_C_3k.hdr",
+  "Skyboxes/GCanyon_C_YumaPoint_3k.hdr",
+  "Skyboxes/Ridgecrest_Road_Ref.hdr",
+  "Skyboxes/Road_to_MonumentValley_Ref.hdr",
+  NULL
+};
+
+Renderer::Shader * LoadShader( const char * vsPath, const char * fsPath )
 {
   char vertexShader[ 16 * 1024 ] = { 0 };
-  FILE * fileVS = fopen( shader->mVertexShaderPath, "rb" );
+  FILE * fileVS = fopen( vsPath, "rb" );
   if ( !fileVS )
   {
-    printf( "Vertex shader load failed: '%s'\n", shader->mVertexShaderPath );
+    printf( "Vertex shader load failed: '%s'\n", vsPath );
     return false;
   }
   fread( vertexShader, 1, 16 * 1024, fileVS );
   fclose( fileVS );
 
   char fragmentShader[ 16 * 1024 ] = { 0 };
-  FILE * fileFS = fopen( shader->mFragmentShaderPath, "rb" );
+  FILE * fileFS = fopen( fsPath, "rb" );
   if ( !fileFS )
   {
-    printf( "Fragment shader load failed: '%s'\n", shader->mFragmentShaderPath );
+    printf( "Fragment shader load failed: '%s'\n", fsPath );
     return false;
   }
   fread( fragmentShader, 1, 16 * 1024, fileFS );
   fclose( fileFS );
 
   char error[ 4096 ];
-  if ( !Renderer::ReloadShaders( vertexShader, (int) strlen( vertexShader ), fragmentShader, (int) strlen( fragmentShader ), error, 4096 ) )
+  Renderer::Shader * shader = Renderer::CreateShader( vertexShader, (int) strlen( vertexShader ), fragmentShader, (int) strlen( fragmentShader ), error, 4096 );
+  if ( !shader )
   {
     printf( "Shader build failed: %s\n", error );
+  }
+
+  return shader;
+}
+
+ShaderConfig * gCurrentShaderConfig = NULL;
+Renderer::Shader * gCurrentShader = NULL;
+bool LoadShaderConfig( ShaderConfig * shader )
+{
+  Renderer::Shader * newShader = LoadShader( shader->mVertexShaderPath, shader->mFragmentShaderPath );
+  if ( !newShader )
+  {
     return false;
   }
 
-  gCurrentShader = shader;
+  gCurrentShaderConfig = shader;
+
+  if ( gCurrentShader )
+  {
+    Renderer::ReleaseShader( gCurrentShader );
+    delete gCurrentShader;
+  }
+  gCurrentShader = newShader;
 
   return true;
 }
 
 glm::vec3 gCameraTarget( 0.0f, 0.0f, 0.0f );
 float gCameraDistance = 500.0f;
+Geometry gModel;
 
 bool LoadMesh( const char * path )
 {
-  if ( !Geometry::LoadMesh( path ) )
+  if ( !gModel.LoadMesh( path ) )
   {
     return false;
   }
 
-  gCameraTarget = ( Geometry::mAABBMin + Geometry::mAABBMax ) / 2.0f;
-  gCameraDistance = glm::length( gCameraTarget - Geometry::mAABBMin ) * 4.0f;
+  gModel.RebindVertexArray( gCurrentShader );
+
+  gCameraTarget = ( gModel.mAABBMin + gModel.mAABBMax ) / 2.0f;
+  gCameraDistance = glm::length( gCameraTarget - gModel.mAABBMin ) * 4.0f;
 
   return true;
 }
 
 void ShowNodeInImGui( int _parentID )
 {
-  for ( std::map<int, Geometry::Node>::iterator it = Geometry::mNodes.begin(); it != Geometry::mNodes.end(); it++ )
+  for ( std::map<int, Geometry::Node>::iterator it = gModel.mNodes.begin(); it != gModel.mNodes.end(); it++ )
   {
     if ( it->second.mParentID == _parentID )
     {
@@ -85,7 +117,7 @@ void ShowNodeInImGui( int _parentID )
       ImGui::Indent();
       for ( int i = 0; i < it->second.mMeshes.size(); i++ )
       {
-        const Geometry::Mesh & mesh = Geometry::mMeshes[ it->second.mMeshes[ i ] ];
+        const Geometry::Mesh & mesh = gModel.mMeshes[ it->second.mMeshes[ i ] ];
         ImGui::TextColored( ImVec4( 1.0f, 0.5f, 1.0f, 1.0f ), "Mesh %d: %d vertices, %d triangles", i + 1, mesh.mVertexCount, mesh.mTriangleCount );
       }
 
@@ -109,6 +141,8 @@ void ShowMaterialInImGui( const char * _channel, Renderer::Texture * _texture )
     ImGui::EndTabItem();
   }
 }
+
+Renderer::Texture * gSkySphereTexture = NULL;
 
 int main( int argc, const char * argv[] )
 {
@@ -140,7 +174,7 @@ int main( int argc, const char * argv[] )
 
   //////////////////////////////////////////////////////////////////////////
   // Bootstrap
-  if ( !LoadShader( &gShaders[ 0 ] ) )
+  if ( !LoadShaderConfig( &gShaders[ 0 ] ) )
   {
     return -4;
   }
@@ -166,6 +200,8 @@ int main( int argc, const char * argv[] )
   float mouseClickPosY = 0.0f;
   glm::vec4 clearColor( 0.08f, 0.18f, 0.18f, 1.0f );
   std::string supportedExtensions = Geometry::GetSupportedExtensions();
+  float skysphereOpacity = 1.0f;
+  float skysphereBlur = 0.75f;
 
   bool xzySpace = false;
   const glm::mat4x4 xzyMatrix(
@@ -173,6 +209,18 @@ int main( int argc, const char * argv[] )
     0.0f, 0.0f, 1.0f, 0.0f,
     0.0f,-1.0f, 0.0f, 0.0f,
     0.0f, 0.0f, 0.0f, 1.0f );
+
+  gSkySphereTexture = Renderer::CreateRGBA8TextureFromFile( skyboxFilenames[ 0 ] );
+
+  Geometry skysphere;
+  skysphere.LoadMesh( "Skyboxes/skysphere.fbx" );
+
+  Renderer::Shader * skysphereShader = LoadShader( "Skyboxes/skysphere.vs", "Skyboxes/skysphere.fs" );
+  if ( !skysphereShader )
+  {
+    return -8;
+  }
+  skysphere.RebindVertexArray( skysphereShader );
 
   while ( !Renderer::WantsToQuit() && !appWantsToQuit )
   {
@@ -203,6 +251,9 @@ int main( int argc, const char * argv[] )
       }
       if ( ImGui::BeginMenu( "Model" ) )
       {
+        ImGui::MenuItem( "Show model info", NULL, &showModelInfo );
+        ImGui::Separator();
+
         bool xyzSpace = !xzySpace;
         if ( ImGui::MenuItem( "XYZ space", NULL, &xyzSpace ) )
         {
@@ -214,23 +265,44 @@ int main( int argc, const char * argv[] )
       if ( ImGui::BeginMenu( "View" ) )
       {
         ImGui::MenuItem( "Enable idle camera", NULL, &automaticCamera );
-        ImGui::MenuItem( "Show model info", NULL, &showModelInfo );
-        ImGui::Separator();
         ImGui::ColorEdit4( "Background", (float *) &clearColor, ImGuiColorEditFlags_AlphaPreviewHalf );
 #ifdef _DEBUG
         ImGui::Separator();
         ImGui::DragFloat3( "Camera Target", (float *) &gCameraTarget );
 #endif
+        ImGui::Separator();
+        ImGui::DragFloat( "Sky blur", &skysphereBlur, 0.1f, 0.0f, 9.0f );
+        ImGui::DragFloat( "Sky opacity", &skysphereOpacity, 0.02f, 0.0f, 1.0f );
         ImGui::EndMenu();
       }
       if ( ImGui::BeginMenu( "Shaders" ) )
       {
         for ( int i = 0; gShaders[ i ].mName; i++ )
         {
-          bool selected = &gShaders[ i ] == gCurrentShader;
+          bool selected = &gShaders[ i ] == gCurrentShaderConfig;
           if ( ImGui::MenuItem( gShaders[ i ].mName, NULL, &selected ) )
           {
-            LoadShader( &gShaders[ i ] );
+            LoadShaderConfig( &gShaders[ i ] );
+          }
+          gModel.RebindVertexArray( gCurrentShader );
+        }
+        if ( gCurrentShaderConfig && gCurrentShaderConfig->mSkysphereVisible )
+        {
+          ImGui::Separator();
+          for ( int i = 0; skyboxFilenames[ i ]; i++ )
+          {
+            bool selected = ( gSkySphereTexture && gSkySphereTexture->mFilename == skyboxFilenames[ i ] );
+            if ( ImGui::MenuItem( skyboxFilenames[ i ], NULL, &selected ) )
+            {
+              if ( gSkySphereTexture )
+              {
+                Renderer::ReleaseTexture( gSkySphereTexture );
+                delete gSkySphereTexture;
+
+                gSkySphereTexture = NULL;
+              }
+              gSkySphereTexture = Renderer::CreateRGBA8TextureFromFile( skyboxFilenames[ i ] );
+            }
           }
         }
         ImGui::EndMenu();
@@ -256,13 +328,13 @@ int main( int argc, const char * argv[] )
       if ( ImGui::BeginTabItem( "Summary" ) )
       {
         int triCount = 0;
-        for ( std::map<int, Geometry::Mesh>::iterator it = Geometry::mMeshes.begin(); it != Geometry::mMeshes.end(); it++ )
+        for ( std::map<int, Geometry::Mesh>::iterator it = gModel.mMeshes.begin(); it != gModel.mMeshes.end(); it++ )
         {
           triCount += it->second.mTriangleCount;
         }
 
         ImGui::Text( "Triangle count: %d", triCount );
-        ImGui::Text( "Mesh count: %d", Geometry::mMeshes.size() );
+        ImGui::Text( "Mesh count: %d", gModel.mMeshes.size() );
 
         ImGui::EndTabItem();
       }
@@ -274,9 +346,9 @@ int main( int argc, const char * argv[] )
       }
       if ( ImGui::BeginTabItem( "Textures / Materials" ) )
       {
-        ImGui::Text( "Material count: %d", Geometry::mMaterials.size() );
+        ImGui::Text( "Material count: %d", gModel.mMaterials.size() );
 
-        for ( std::map<int, Geometry::Material>::iterator it = Geometry::mMaterials.begin(); it != Geometry::mMaterials.end(); it++ )
+        for ( std::map<int, Geometry::Material>::iterator it = gModel.mMaterials.begin(); it != gModel.mMaterials.end(); it++ )
         {
           if ( ImGui::CollapsingHeader( it->second.mName.c_str() ) )
           {
@@ -315,7 +387,6 @@ int main( int argc, const char * argv[] )
     {
       std::string & path = Renderer::dropEventBuffer[ i ];
       LoadMesh( path.c_str() );
-
     }
     Renderer::dropEventBufferCount = 0;
 
@@ -393,22 +464,52 @@ int main( int argc, const char * argv[] )
     Renderer::mouseEventBufferCount = 0;
 
     //////////////////////////////////////////////////////////////////////////
-    // Mesh render
+    // Camera and lights
 
     if ( automaticCamera )
     {
       cameraYaw += io.DeltaTime * 0.3f;
     }
 
-    float verticalFovInRadian = 0.5f;
-    projectionMatrix = glm::perspective( verticalFovInRadian, settings.nWidth / (float) settings.nHeight, gCameraDistance / 1000.0f, gCameraDistance * 2.0f );
-    Renderer::SetShaderConstant( "mat_projection", projectionMatrix );
+    //////////////////////////////////////////////////////////////////////////
+    // Skysphere render
 
     glm::vec3 cameraPosition( 0.0f, 0.0f, -1.0f );
     cameraPosition = glm::rotateX( cameraPosition, cameraPitch );
     cameraPosition = glm::rotateY( cameraPosition, cameraYaw );
+
+    static glm::mat4x4 worldRootXYZ( 1.0f );
+    if ( gCurrentShaderConfig->mSkysphereVisible )
+    {
+      float verticalFovInRadian = 0.5f;
+      projectionMatrix = glm::perspective( verticalFovInRadian, settings.nWidth / (float) settings.nHeight, 0.001f, 2.0f );
+      skysphereShader->SetConstant( "mat_projection", projectionMatrix );
+
+      viewMatrix = glm::lookAtRH( cameraPosition * 0.15f, glm::vec3( 0.0f, 0.0f, 0.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
+      skysphereShader->SetConstant( "mat_view", viewMatrix );
+
+      skysphereShader->SetConstant( "has_tex_skysphere", gSkySphereTexture != NULL );
+      if ( gSkySphereTexture )
+      {
+        skysphereShader->SetTexture( "tex_skysphere", gSkySphereTexture );
+      }
+
+      skysphereShader->SetConstant( "skysphere_blur", skysphereBlur );
+      skysphereShader->SetConstant( "skysphere_opacity", skysphereOpacity );
+      skysphereShader->SetConstant( "skysphere_rotation", lightYaw );
+
+      skysphere.Render( worldRootXYZ, skysphereShader );
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    // Mesh render
+
+    float verticalFovInRadian = 0.5f;
+    projectionMatrix = glm::perspective( verticalFovInRadian, settings.nWidth / (float) settings.nHeight, gCameraDistance / 1000.0f, gCameraDistance * 2.0f );
+    gCurrentShader->SetConstant( "mat_projection", projectionMatrix );
+
     cameraPosition *= gCameraDistance;
-    Renderer::SetShaderConstant( "camera_position", cameraPosition );
+    gCurrentShader->SetConstant( "camera_position", cameraPosition );
 
     glm::vec3 lightDirection( 0.0f, 0.0f, 1.0f );
     lightDirection = glm::rotateX( lightDirection, lightPitch );
@@ -418,81 +519,28 @@ int main( int argc, const char * argv[] )
     fillLightDirection = glm::rotateX( fillLightDirection, lightPitch - 0.4f );
     fillLightDirection = glm::rotateY( fillLightDirection, lightYaw + 0.8f );
 
-    Renderer::SetShaderConstant( "lights[0].direction", lightDirection );
-    Renderer::SetShaderConstant( "lights[0].color", glm::vec3( 1.0f ) );
-    Renderer::SetShaderConstant( "lights[1].direction", fillLightDirection );
-    Renderer::SetShaderConstant( "lights[1].color", glm::vec3( 0.5f ) );
-    Renderer::SetShaderConstant( "lights[2].direction", -fillLightDirection );
-    Renderer::SetShaderConstant( "lights[2].color", glm::vec3( 0.25f ) );
+    gCurrentShader->SetConstant( "lights[0].direction", lightDirection );
+    gCurrentShader->SetConstant( "lights[0].color", glm::vec3( 1.0f ) );
+    gCurrentShader->SetConstant( "lights[1].direction", fillLightDirection );
+    gCurrentShader->SetConstant( "lights[1].color", glm::vec3( 0.5f ) );
+    gCurrentShader->SetConstant( "lights[2].direction", -fillLightDirection );
+    gCurrentShader->SetConstant( "lights[2].color", glm::vec3( 0.25f ) );
+
+    gCurrentShader->SetConstant( "skysphere_rotation", lightYaw );
 
     viewMatrix = glm::lookAtRH( cameraPosition + gCameraTarget, gCameraTarget, glm::vec3( 0.0f, 1.0f, 0.0f ) );
-    Renderer::SetShaderConstant( "mat_view", viewMatrix );
+    gCurrentShader->SetConstant( "mat_view", viewMatrix );
 
-    for ( std::map<int, Geometry::Node>::iterator it = Geometry::mNodes.begin(); it != Geometry::mNodes.end(); it++ )
+    gCurrentShader->SetConstant( "has_tex_skysphere", gSkySphereTexture != NULL );
+    if ( gSkySphereTexture )
     {
-      const Geometry::Node & node = it->second;
-
-      if ( xzySpace )
-      {
-        Renderer::SetShaderConstant( "mat_world", Geometry::mMatrices[ node.mID ] * xzyMatrix );
-      }
-      else
-      {
-        Renderer::SetShaderConstant( "mat_world", Geometry::mMatrices[ node.mID ] );
-      }
-
-      for ( int i = 0; i < it->second.mMeshes.size(); i++ )
-      {
-        const Geometry::Mesh & mesh = Geometry::mMeshes[ it->second.mMeshes[ i ] ];
-        const Geometry::Material & material = Geometry::mMaterials[ mesh.mMaterialIndex ];
-
-        Renderer::SetShaderConstant( "color_ambient", material.mColorAmbient );
-        Renderer::SetShaderConstant( "color_diffuse", material.mColorDiffuse );
-        Renderer::SetShaderConstant( "color_specular", material.mColorSpecular );
-        Renderer::SetShaderConstant( "specular_shininess", material.mSpecularShininess );
-
-        Renderer::SetShaderConstant( "has_tex_diffuse", material.mTextureDiffuse != NULL );
-        Renderer::SetShaderConstant( "has_tex_normals", material.mTextureNormals != NULL );
-        Renderer::SetShaderConstant( "has_tex_specular", material.mTextureSpecular != NULL );
-        Renderer::SetShaderConstant( "has_tex_albedo", material.mTextureAlbedo != NULL );
-        Renderer::SetShaderConstant( "has_tex_roughness", material.mTextureRoughness != NULL );
-        Renderer::SetShaderConstant( "has_tex_metallic", material.mTextureMetallic != NULL );
-        Renderer::SetShaderConstant( "has_tex_ao", material.mTextureAO != NULL );
-
-        if ( material.mTextureDiffuse )
-        {
-          Renderer::SetShaderTexture( "tex_diffuse", material.mTextureDiffuse );
-        }
-        if ( material.mTextureNormals )
-        {
-          Renderer::SetShaderTexture( "tex_normals", material.mTextureNormals );
-        }
-        if ( material.mTextureSpecular )
-        {
-          Renderer::SetShaderTexture( "tex_specular", material.mTextureSpecular );
-        }
-        if ( material.mTextureAlbedo )
-        {
-          Renderer::SetShaderTexture( "tex_albedo", material.mTextureAlbedo );
-        }
-        if ( material.mTextureRoughness )
-        {
-          Renderer::SetShaderTexture( "tex_roughness", material.mTextureRoughness );
-        }
-        if ( material.mTextureMetallic )
-        {
-          Renderer::SetShaderTexture( "tex_metallic", material.mTextureMetallic );
-        }
-        if ( material.mTextureAO )
-        {
-          Renderer::SetShaderTexture( "tex_ao", material.mTextureAO );
-        }
-
-        glBindVertexArray( mesh.mVertexArrayObject );
-
-        glDrawElements( GL_TRIANGLES, mesh.mTriangleCount * 3, GL_UNSIGNED_INT, NULL );
-      }
+      gCurrentShader->SetTexture( "tex_skysphere", gSkySphereTexture );
     }
+
+    //////////////////////////////////////////////////////////////////////////
+    // Mesh render
+
+    gModel.Render( xzySpace ? xzyMatrix : worldRootXYZ, gCurrentShader );
 
     //////////////////////////////////////////////////////////////////////////
     // End frame
@@ -502,11 +550,28 @@ int main( int argc, const char * argv[] )
 
   //////////////////////////////////////////////////////////////////////////
   // Cleanup
+
+  if ( gCurrentShader )
+  {
+    Renderer::ReleaseShader( gCurrentShader );
+    delete gCurrentShader;
+  }
+  if ( skysphereShader )
+  {
+    Renderer::ReleaseShader( skysphereShader );
+    delete skysphereShader;
+  }
+  if ( gSkySphereTexture )
+  {
+    Renderer::ReleaseTexture( gSkySphereTexture );
+    delete gSkySphereTexture;
+  }
+
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplGlfw_Shutdown();
   ImGui::DestroyContext();
 
-  Geometry::UnloadMesh();
+  gModel.UnloadMesh();
 
   Renderer::Close();
 

@@ -23,8 +23,6 @@ namespace Renderer
 GLFWwindow * mWindow = NULL;
 bool run = true;
 
-GLuint shaderProgram = 0;
-
 int nWidth = 0;
 int nHeight = 0;
 
@@ -49,7 +47,6 @@ void drop_callback( GLFWwindow * window, int path_count, const char * paths[] );
 bool Open( RENDERER_SETTINGS * settings )
 {
   glfwSetErrorCallback( error_callback );
-  shaderProgram = 0;
 
 #ifdef __APPLE__
   glfwInitHint( GLFW_COCOA_CHDIR_RESOURCES, GLFW_FALSE );
@@ -195,19 +192,7 @@ void drop_callback( GLFWwindow * window, int path_count, const char * paths[] )
     dropEventBufferCount++;
   }
 }
-void __SetupVertexArray( const char * name, int sizeInFloats, int & offsetInFloats )
-{
-  unsigned int stride = sizeof( float ) * 14;
 
-  GLint location = glGetAttribLocation( shaderProgram, name );
-  if ( location >= 0 )
-  {
-    glVertexAttribPointer( location, sizeInFloats, GL_FLOAT, GL_FALSE, stride, (GLvoid *) ( offsetInFloats * sizeof( GLfloat ) ) );
-    glEnableVertexAttribArray( location );
-  }
-
-  offsetInFloats += sizeInFloats;
-}
 
 void StartFrame( glm::vec4 & clearColor )
 {
@@ -215,18 +200,8 @@ void StartFrame( glm::vec4 & clearColor )
   glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
 
   glEnable( GL_DEPTH_TEST );
-  glUseProgram( shaderProgram );
 }
 
-void RebindVertexArray()
-{
-  int offset = 0;
-  __SetupVertexArray( "in_pos", 3, offset );
-  __SetupVertexArray( "in_normal", 3, offset );
-  __SetupVertexArray( "in_tangent", 3, offset );
-  __SetupVertexArray( "in_binormal", 3, offset );
-  __SetupVertexArray( "in_texcoord", 2, offset );
-}
 
 void EndFrame()
 {
@@ -246,117 +221,139 @@ void Close()
   glfwTerminate();
 }
 
-bool ReloadShaders( const char * szVertexShaderCode, int nVertexShaderCodeSize, const char * szFragmentShaderCode, int nFragmentShaderCodeSize, char * szErrorBuffer, int nErrorBufferSize )
+Shader * CreateShader( const char * szVertexShaderCode, int nVertexShaderCodeSize, const char * szFragmentShaderCode, int nFragmentShaderCodeSize, char * szErrorBuffer, int nErrorBufferSize )
 {
-  GLuint program = glCreateProgram();
+  Shader * shader = new Shader;
 
-  GLuint vertexShader = glCreateShader( GL_VERTEX_SHADER );
+  shader->mProgram = glCreateProgram();
+
+  shader->mVertexShader = glCreateShader( GL_VERTEX_SHADER );
   GLint size = 0;
   GLint result = 0;
 
   //////////////////////////////////////////////////////////////////////////
   // Vertex shader
-  glShaderSource( vertexShader, 1, (const GLchar **) &szVertexShaderCode, &nVertexShaderCodeSize );
-  glCompileShader( vertexShader );
-  glGetShaderInfoLog( vertexShader, nErrorBufferSize, &size, szErrorBuffer );
-  glGetShaderiv( vertexShader, GL_COMPILE_STATUS, &result );
+  glShaderSource( shader->mVertexShader, 1, (const GLchar **) &szVertexShaderCode, &nVertexShaderCodeSize );
+  glCompileShader( shader->mVertexShader );
+  glGetShaderInfoLog( shader->mVertexShader, nErrorBufferSize, &size, szErrorBuffer );
+  glGetShaderiv( shader->mVertexShader, GL_COMPILE_STATUS, &result );
   if ( !result )
   {
-    glDeleteProgram( program );
-    glDeleteShader( vertexShader );
-    return false;
+    glDeleteShader( shader->mVertexShader );
+    glDeleteProgram( shader->mProgram );
+    return NULL;
   }
 
-  GLuint fragmentShader = glCreateShader( GL_FRAGMENT_SHADER );
+  shader->mFragmentShader = glCreateShader( GL_FRAGMENT_SHADER );
 
   //////////////////////////////////////////////////////////////////////////
   // Fragment shader
-  glShaderSource( fragmentShader, 1, (const GLchar **) &szFragmentShaderCode, &nFragmentShaderCodeSize );
-  glCompileShader( fragmentShader );
-  glGetShaderInfoLog( fragmentShader, nErrorBufferSize, &size, szErrorBuffer );
-  glGetShaderiv( fragmentShader, GL_COMPILE_STATUS, &result );
+  glShaderSource( shader->mFragmentShader, 1, (const GLchar **) &szFragmentShaderCode, &nFragmentShaderCodeSize );
+  glCompileShader( shader->mFragmentShader );
+  glGetShaderInfoLog( shader->mFragmentShader, nErrorBufferSize, &size, szErrorBuffer );
+  glGetShaderiv( shader->mFragmentShader, GL_COMPILE_STATUS, &result );
   if ( !result )
   {
-    glDeleteProgram( program );
-    glDeleteShader( fragmentShader );
-    return false;
+    glDeleteShader( shader->mVertexShader );
+    glDeleteShader( shader->mFragmentShader );
+    glDeleteProgram( shader->mProgram );
+    return NULL;
   }
 
   //////////////////////////////////////////////////////////////////////////
   // Link shaders to program
-  glAttachShader( program, vertexShader );
-  glAttachShader( program, fragmentShader );
-  glLinkProgram( program );
-  glGetProgramInfoLog( program, nErrorBufferSize - size, &size, szErrorBuffer + size );
-  glGetProgramiv( program, GL_LINK_STATUS, &result );
+  glAttachShader( shader->mProgram, shader->mVertexShader );
+  glAttachShader( shader->mProgram, shader->mFragmentShader );
+  glLinkProgram( shader->mProgram );
+  glGetProgramInfoLog( shader->mProgram, nErrorBufferSize - size, &size, szErrorBuffer + size );
+  glGetProgramiv( shader->mProgram, GL_LINK_STATUS, &result );
   if ( !result )
   {
-    glDeleteProgram( program );
-    glDeleteShader( fragmentShader );
+    glDeleteShader( shader->mVertexShader );
+    glDeleteShader( shader->mFragmentShader );
+    glDeleteProgram( shader->mProgram );
     return false;
   }
 
-  if ( shaderProgram )
-  {
-    glDeleteProgram( shaderProgram );
-  }
-
-  shaderProgram = program;
-
-  return true;
+  return shader;
 }
 
-void SetShaderConstant( const char * szConstName, bool x )
+void ReleaseShader( Shader * _shader )
 {
-  GLint location = glGetUniformLocation( shaderProgram, szConstName );
-  if ( location != -1 )
-  {
-    glProgramUniform1i( shaderProgram, location, x ? 1 : 0 );
-  }
+  glDeleteShader( _shader->mVertexShader );
+  glDeleteShader( _shader->mFragmentShader );
+  glDeleteProgram( _shader->mProgram );
 }
 
-void SetShaderConstant( const char * szConstName, float x )
+void Shader::SetConstant( const char * szConstName, bool x )
 {
-  GLint location = glGetUniformLocation( shaderProgram, szConstName );
+  GLint location = glGetUniformLocation( mProgram, szConstName );
   if ( location != -1 )
   {
-    glProgramUniform1f( shaderProgram, location, x );
+    glProgramUniform1i( mProgram, location, x ? 1 : 0 );
   }
 }
 
-void SetShaderConstant( const char * szConstName, float x, float y )
+void Shader::SetConstant( const char * szConstName, float x )
 {
-  GLint location = glGetUniformLocation( shaderProgram, szConstName );
+  GLint location = glGetUniformLocation( mProgram, szConstName );
   if ( location != -1 )
   {
-    glProgramUniform2f( shaderProgram, location, x, y );
+    glProgramUniform1f( mProgram, location, x );
   }
 }
 
-void SetShaderConstant( const char * szConstName, const glm::vec3 & vector )
+void Shader::SetConstant( const char * szConstName, float x, float y )
 {
-  GLint location = glGetUniformLocation( shaderProgram, szConstName );
+  GLint location = glGetUniformLocation( mProgram, szConstName );
   if ( location != -1 )
   {
-    glProgramUniform3f( shaderProgram, location, vector.x, vector.y, vector.z );
+    glProgramUniform2f( mProgram, location, x, y );
   }
 }
 
-void SetShaderConstant( const char * szConstName, const glm::vec4 & vector )
+void Shader::SetConstant( const char * szConstName, const glm::vec3 & vector )
 {
-  GLint location = glGetUniformLocation( shaderProgram, szConstName );
+  GLint location = glGetUniformLocation( mProgram, szConstName );
   if ( location != -1 )
   {
-    glProgramUniform4f( shaderProgram, location, vector.x, vector.y, vector.z, vector.w );
+    glProgramUniform3f( mProgram, location, vector.x, vector.y, vector.z );
   }
 }
 
-void SetShaderConstant( const char * szConstName, const glm::mat4x4 & matrix )
+void Shader::SetConstant( const char * szConstName, const glm::vec4 & vector )
 {
-  GLint location = glGetUniformLocation( shaderProgram, szConstName );
+  GLint location = glGetUniformLocation( mProgram, szConstName );
   if ( location != -1 )
   {
-    glProgramUniformMatrix4fv( shaderProgram, location, 1, 0, (float*)&matrix );
+    glProgramUniform4f( mProgram, location, vector.x, vector.y, vector.z, vector.w );
+  }
+}
+
+void Shader::SetConstant( const char * szConstName, const glm::mat4x4 & matrix )
+{
+  GLint location = glGetUniformLocation( mProgram, szConstName );
+  if ( location != -1 )
+  {
+    glProgramUniformMatrix4fv( mProgram, location, 1, 0, (float*)&matrix );
+  }
+}
+
+void Shader::SetTexture( const char * szTextureName, Texture * tex )
+{
+  if ( !tex )
+    return;
+
+  GLint location = glGetUniformLocation( mProgram, szTextureName );
+  if ( location != -1 )
+  {
+    glProgramUniform1i( mProgram, location, ( (Texture *) tex )->mGLTextureUnit );
+    glActiveTexture( GL_TEXTURE0 + ( (Texture *) tex )->mGLTextureUnit );
+    switch ( tex->mType )
+    {
+      case TEXTURETYPE_1D: glBindTexture( GL_TEXTURE_1D, ( (Texture *) tex )->mGLTextureID ); break;
+      case TEXTURETYPE_2D: glBindTexture( GL_TEXTURE_2D, ( (Texture *) tex )->mGLTextureID ); break;
+    }
   }
 }
 
@@ -389,10 +386,11 @@ Texture * CreateRGBA8TextureFromFile( const char * szFilename, const bool _loadA
 
   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
-  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
+  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR );
 
   glTexImage2D( GL_TEXTURE_2D, 0, internalFormat, width, height, 0, srcFormat, format, data );
+  glGenerateMipmap( GL_TEXTURE_2D );
 
   stbi_image_free( data );
 
@@ -406,28 +404,15 @@ Texture * CreateRGBA8TextureFromFile( const char * szFilename, const bool _loadA
   return tex;
 }
 
-void SetShaderTexture( const char * szTextureName, Texture * tex )
-{
-  if ( !tex )
-    return;
-
-  GLint location = glGetUniformLocation( shaderProgram, szTextureName );
-  if ( location != -1 )
-  {
-    glProgramUniform1i( shaderProgram, location, ( (Texture *) tex )->mGLTextureUnit );
-    glActiveTexture( GL_TEXTURE0 + ( (Texture *) tex )->mGLTextureUnit );
-    switch ( tex->mType )
-    {
-      case TEXTURETYPE_1D: glBindTexture( GL_TEXTURE_1D, ( (Texture *) tex )->mGLTextureID ); break;
-      case TEXTURETYPE_2D: glBindTexture( GL_TEXTURE_2D, ( (Texture *) tex )->mGLTextureID ); break;
-    }
-  }
-}
-
 
 void ReleaseTexture( Texture * tex )
 {
   glDeleteTextures( 1, &( (Texture *) tex )->mGLTextureID );
+}
+
+void SetShader( Shader * _shader )
+{
+  glUseProgram( _shader->mProgram );
 }
 
 void CopyBackbufferToTexture( Texture * tex )

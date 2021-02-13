@@ -4,6 +4,8 @@
 
 ASSIMP based general purpose model viewer ("turntable") created for the Revision 2021 3D Graphics Competition
 
+## Credits
+
 ### Libraries and other included software
 - Open Asset Import Library by the ASSIMP dev team (https://www.assimp.org)
 - Dear ImGui by Omar Cornut (http://www.dearimgui.com)
@@ -14,4 +16,8 @@ ASSIMP based general purpose model viewer ("turntable") created for the Revision
 
 These software are available under their respective licenses.
 
-The remainder of this project code was written by Gargaj / Conspiracy and is public domain. Large portions of the code were cannibalized from [Bonzomatic](https://github.com/Gargaj/Bonzomatic).
+The remainder of this project code was (mostly) written by Gargaj / Conspiracy and is public domain. Large portions of the code were cannibalized from [Bonzomatic](https://github.com/Gargaj/Bonzomatic).
+
+### Textures and cube maps
+
+All HDR textures are courtesy of the [HDRLabs sIBL archive](http://www.hdrlabs.com/sibl/archive.html).
