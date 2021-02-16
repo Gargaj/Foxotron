@@ -42,13 +42,13 @@ out vec4 frag_color;
 
 const float PI = 3.1415926536;
 
-vec3 fresnelSchlick( vec3 H, vec3 V, vec3 F0 )
+vec3 fresnel_schlick( vec3 H, vec3 V, vec3 F0 )
 {
   float cosTheta = clamp( dot( H, V ), 0., 1. );
   return F0 + ( vec3( 1.0 ) - F0 ) * pow( 1. - cosTheta, 5.0 );
 }
 
-float distributionGGX( vec3 N, vec3 H, float roughness )
+float distribution_ggx( vec3 N, vec3 H, float roughness )
 {
   float a = roughness * roughness;
   float a2 = a * a;
@@ -58,17 +58,17 @@ float distributionGGX( vec3 N, vec3 H, float roughness )
   return a2 / ( PI * factor * factor );
 }
 
-float geometrySchlickGGX( vec3 N, vec3 V, float k )
+float geometry_schlick_ggx( vec3 N, vec3 V, float k )
 {
   float NdotV = max( 0., dot( N, V ) );
   return NdotV / (NdotV * ( 1. - k ) + k );
 }
 
-float geometrySmith( vec3 N, vec3 V, vec3 L, float roughness )
+float geometry_smith( vec3 N, vec3 V, vec3 L, float roughness )
 {
   float r = roughness + 1.;
   float k = (r * r) / 8.;
-  return geometrySchlickGGX( N, V, k ) * geometrySchlickGGX( N, L, k );
+  return geometry_schlick_ggx( N, V, k ) * geometry_schlick_ggx( N, L, k );
 }
 
 void main(void)
@@ -123,13 +123,13 @@ void main(void)
     vec3 L = -normalize( lights[ i ].direction );
     vec3 H = normalize( V + L );
 
-    vec3 F = fresnelSchlick( H, V, F0 );
+    vec3 F = fresnel_schlick( H, V, F0 );
     vec3 kS = F;
     vec3 kD = vec3(1.0) - kS;
     kD *= 1.0 - metallic;
 
-    float D = distributionGGX( N, H, roughness );
-    float G = geometrySmith( N, V, L, roughness );
+    float D = distribution_ggx( N, H, roughness );
+    float G = geometry_smith( N, V, L, roughness );
 
     vec3 num = D * F * G;
     float denom = 4. * max( 0., dot( N, V ) ) * max( 0., dot( N, L ) );
