@@ -148,7 +148,6 @@ bool Geometry::LoadMesh( const char * _path )
     aiProcess_Triangulate |
     aiProcess_JoinIdenticalVertices |
     aiProcess_SortByPType |
-    aiProcess_MakeLeftHanded |
     aiProcess_FlipWindingOrder |
     aiProcess_TransformUVCoords |
     aiProcess_FlipUVs |

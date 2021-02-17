@@ -16,12 +16,12 @@ const float PI = 3.1415926536;
 vec2 sphere_to_polar( vec3 normal )
 {
   normal = normalize( normal );
-  return vec2( atan(normal.z, normal.x) / PI / 2.0 + 0.5 + skysphere_rotation, 1. - acos(normal.y) / PI );
+  return vec2( atan(normal.z, normal.x) / PI / 2.0 + 0.5 + skysphere_rotation, acos(normal.y) / PI );
 }
 
 void main(void)
 {
-  vec3 sky_color = textureLod( tex_skysphere, sphere_to_polar( normalize( out_worldpos * vec3( 1.0,-1.0,-1.0) ) ), skysphere_blur ).rgb;
+  vec3 sky_color = textureLod( tex_skysphere, sphere_to_polar( normalize( out_worldpos ) ), skysphere_blur ).rgb;
 
   frag_color = vec4( mix( background_color.rgb, sky_color, skysphere_opacity ), 1.0f );
 }

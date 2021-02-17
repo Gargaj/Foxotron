@@ -506,6 +506,8 @@ int main( int argc, const char * argv[] )
       skysphereShader->SetConstant( "skysphere_rotation", -lightYaw );
 
       skysphere.Render( worldRootXYZ, skysphereShader );
+
+      glClear( GL_DEPTH_BUFFER_BIT );
     }
 
     //////////////////////////////////////////////////////////////////////////
