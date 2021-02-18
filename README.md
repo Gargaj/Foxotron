@@ -16,7 +16,8 @@ ASSIMP based general purpose model viewer ("turntable") created for the Revision
 
 These software are available under their respective licenses.
 
-The remainder of this project code was (mostly) written by Gargaj / Conspiracy and is public domain. Large portions of the code were cannibalized from [Bonzomatic](https://github.com/Gargaj/Bonzomatic).
+The remainder of this project code was (mostly) written by Gargaj / Conspiracy and is public domain; PBR lighting shaders by cce / Peisik.
+Large portions of the code were cannibalized from [Bonzomatic](https://github.com/Gargaj/Bonzomatic).
 
 ### Textures and cube maps
 
