@@ -7,8 +7,11 @@ call :build
 
 copy LICENSE _package
 copy README.md _package
+
 mkdir _package\Shaders
 copy Shaders _package\Shaders\
+mkdir _package\Skyboxes
+copy Skyboxes _package\Skyboxes\
 
 cd _package
 set FN=Foxotron_%date:~0,4%-%date:~5,2%-%date:~8,2%.zip
