@@ -123,7 +123,13 @@ void ShowMaterialInImGui( const char * _channel, Renderer::Texture * _texture )
   }
 }
 
-Renderer::Texture * gSkySphereTexture = NULL;
+struct SkyImages
+{
+  Renderer::Texture* reflection = NULL;
+  Renderer::Texture* env = NULL;
+};
+
+SkyImages gSkyImages;
 
 int main( int argc, const char * argv[] )
 {
@@ -141,7 +147,7 @@ int main( int argc, const char * argv[] )
   fclose( configFile );
 
   options.parse( configData );
-  if ( !options.has<jsonxx::Array>( "shaders" ) || !options.has<jsonxx::Array>( "skySphereTextures" ) )
+  if ( !options.has<jsonxx::Array>( "shaders" ) || !options.has<jsonxx::Array>( "skyImages" ) )
   {
     printf( "Config file broken!\n" );
     return -11;
@@ -211,7 +217,9 @@ int main( int argc, const char * argv[] )
     0.0f,-1.0f, 0.0f, 0.0f,
     0.0f, 0.0f, 0.0f, 1.0f );
 
-  gSkySphereTexture = Renderer::CreateRGBA8TextureFromFile( options.get<jsonxx::Array>( "skySphereTextures" ).get<jsonxx::String>( 0 ).c_str() );
+  auto firstSkySphereTexture = options.get<jsonxx::Array>( "skyImages" ).get<jsonxx::Object>( 0 );
+
+  gSkyImages.reflection = Renderer::CreateRGBA8TextureFromFile( firstSkySphereTexture.get<jsonxx::String>( "reflection" ).c_str() );
 
   Geometry skysphere;
   skysphere.LoadMesh( "Skyboxes/skysphere.fbx" );
@@ -293,21 +301,20 @@ int main( int argc, const char * argv[] )
         if ( gCurrentShaderConfig && gCurrentShaderConfig->get<jsonxx::Boolean>("showSkybox") )
         {
           ImGui::Separator();
-          for ( int i = 0; i < options.get<jsonxx::Array>( "skySphereTextures" ).size(); i++ )
+          for ( int i = 0; i < options.get<jsonxx::Array>( "skyImages" ).size(); i++ )
           {
-            const std::string & filename = options.get<jsonxx::Array>( "skySphereTextures" ).get<jsonxx::String>( i );
+            const auto & images = options.get<jsonxx::Array>( "skyImages" ).get<jsonxx::Object>( i );
+            const std::string & filename = images.get<jsonxx::String>( "reflection" );
 
-            bool selected = ( gSkySphereTexture && gSkySphereTexture->mFilename == filename );
+            bool selected = ( gSkyImages.reflection && gSkyImages.reflection->mFilename == filename );
             if ( ImGui::MenuItem( filename.c_str(), NULL, &selected ) )
             {
-              if ( gSkySphereTexture )
+              if ( gSkyImages.reflection )
               {
-                Renderer::ReleaseTexture( gSkySphereTexture );
-                delete gSkySphereTexture;
-
-                gSkySphereTexture = NULL;
+                Renderer::ReleaseTexture( gSkyImages.reflection );
+                gSkyImages.reflection = NULL;
               }
-              gSkySphereTexture = Renderer::CreateRGBA8TextureFromFile( filename.c_str() );
+              gSkyImages.reflection = Renderer::CreateRGBA8TextureFromFile( filename.c_str() );
             }
           }
         }
@@ -494,10 +501,10 @@ int main( int argc, const char * argv[] )
       viewMatrix = glm::lookAtRH( cameraPosition * 0.15f, glm::vec3( 0.0f, 0.0f, 0.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
       skysphereShader->SetConstant( "mat_view", viewMatrix );
 
-      skysphereShader->SetConstant( "has_tex_skysphere", gSkySphereTexture != NULL );
-      if ( gSkySphereTexture )
+      skysphereShader->SetConstant( "has_tex_skysphere", gSkyImages.reflection != NULL );
+      if ( gSkyImages.reflection )
       {
-        skysphereShader->SetTexture( "tex_skysphere", gSkySphereTexture );
+        skysphereShader->SetTexture( "tex_skysphere", gSkyImages.reflection );
       }
 
       skysphereShader->SetConstant( "background_color", clearColor );
@@ -540,10 +547,10 @@ int main( int argc, const char * argv[] )
     viewMatrix = glm::lookAtRH( cameraPosition + gCameraTarget, gCameraTarget, glm::vec3( 0.0f, 1.0f, 0.0f ) );
     gCurrentShader->SetConstant( "mat_view", viewMatrix );
 
-    gCurrentShader->SetConstant( "has_tex_skysphere", gSkySphereTexture != NULL );
-    if ( gSkySphereTexture )
+    gCurrentShader->SetConstant( "has_tex_skysphere", gSkyImages.reflection != NULL );
+    if ( gSkyImages.reflection )
     {
-      gCurrentShader->SetTexture( "tex_skysphere", gSkySphereTexture );
+      gCurrentShader->SetTexture( "tex_skysphere", gSkyImages.reflection );
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -570,10 +577,10 @@ int main( int argc, const char * argv[] )
     Renderer::ReleaseShader( skysphereShader );
     delete skysphereShader;
   }
-  if ( gSkySphereTexture )
+  if ( gSkyImages.reflection )
   {
-    Renderer::ReleaseTexture( gSkySphereTexture );
-    delete gSkySphereTexture;
+    Renderer::ReleaseTexture( gSkyImages.reflection );
+    gSkyImages.reflection = NULL;
   }
 
   ImGui_ImplOpenGL3_Shutdown();
