@@ -21,6 +21,7 @@ uniform vec3 camera_position;
 uniform Light lights[3];
 
 uniform sampler2D tex_skysphere;
+uniform sampler2D tex_skyenv;
 uniform sampler2D tex_albedo;
 uniform sampler2D tex_diffuse;
 uniform sampler2D tex_specular;
@@ -31,6 +32,7 @@ uniform sampler2D tex_ao;
 uniform sampler2D tex_ambient;
 
 uniform bool has_tex_skysphere;
+uniform bool has_tex_skyenv;
 uniform bool has_tex_diffuse;
 uniform bool has_tex_normals;
 uniform bool has_tex_specular;
@@ -82,25 +84,21 @@ float geometry_smith( vec3 N, vec3 V, vec3 L, float roughness )
 vec2 sphere_to_polar( vec3 normal )
 {
   normal = normalize( normal );
-  return vec2( atan(normal.z, normal.x) / PI / 2.0 + 0.5 + skysphere_rotation, 1. - acos(normal.y) / PI );
+
+  float ang = atan( normal.z, normal.x );
+
+  return vec2( ang / PI / 2.0 + 0.5 + skysphere_rotation, 1. - acos( normal.y ) / PI );
 }
 
 vec3 sample_sky( vec3 normal )
 {
-  // TODO for some reason we need to flip y and z axes here to match sky sphere
-  vec2 polar = sphere_to_polar( vec3( 1., -1., -1.) * normal );
+  vec2 polar = sphere_to_polar( normal * vec3( 1., -1., 1. ) );
   return texture( tex_skysphere, polar ).rgb;
-}
-
-vec3 sample_sky_lod( vec3 normal, int level )
-{
-  vec2 polar = sphere_to_polar( vec3( 1., -1., -1.) * normal );
-  return textureLod( tex_skysphere, polar, level ).rgb;
 }
 
 vec3 sample_irradiance_slow( vec3 normal, vec3 vertex_tangent )
 {
-  float delta = 0.1;
+  float delta = 0.10;
 
   // Construct the tangent space using the perturbed normal and the original vertex tangent.
   // Maybe there's a better way to do this?
@@ -122,7 +120,6 @@ vec3 sample_irradiance_slow( vec3 normal, vec3 vertex_tangent )
       vec3 world_space = tangent_space.x * right + tangent_space.y + up + tangent_space.z * normal;
 
       vec3 color = sample_sky( world_space ) * cos( theta ) * sin( theta );
-      //vec3 color = world_space.y > 0.9 ? vec3(1., 0., 0.) : vec3(0.);
       irradiance += color * cos( theta ) * sin( theta );
       numIrradianceSamples++;
     }
@@ -134,9 +131,22 @@ vec3 sample_irradiance_slow( vec3 normal, vec3 vertex_tangent )
 
 vec3 sample_irradiance_fast( vec3 normal, vec3 vertex_tangent )
 {
-  int level = 8;
-  vec3 radiance = sample_sky_lod( normal, level );
-  return radiance; // TODO how to properly normalize a single mipmap tap to irradiance?
+  // Sample the irradiance map if it exists, otherwise fall back to blurred reflection map.
+  if ( has_tex_skyenv )
+  {
+    // TODO: Is this y-axis flip really necessary?
+    vec2 polar = sphere_to_polar( normal * vec3( 1., -1., 1. ) );
+    // HACK: Sample a smaller mip here to avoid high frequency color variations on detailed normal
+    //       mapped areas.
+    return textureLod( tex_skyenv, polar, 2 ).rgb;
+  }
+  else
+  {
+    int level = 8;
+    vec2 polar = sphere_to_polar( normal * vec3( 1., -1., 1. ) );
+    // TODO how to properly normalize a single mipmap tap to irradiance?
+    return textureLod( tex_skysphere, polar, level ).rgb;
+  }
 }
 
 void main(void)
@@ -212,7 +222,7 @@ void main(void)
   {
     vec3 irradiance = vec3(0.);
 
-    const bool bruteforce_irradiance = false;
+    bool bruteforce_irradiance = false;
 
     if (bruteforce_irradiance)
     {
