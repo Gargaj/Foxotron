@@ -317,13 +317,15 @@ int main( int argc, const char * argv[] )
       {
         ImGui::MenuItem( "Enable idle camera", NULL, &automaticCamera );
         ImGui::ColorEdit4( "Background", (float *) &clearColor, ImGuiColorEditFlags_AlphaPreviewHalf );
-#ifdef _DEBUG
-        ImGui::Separator();
-        ImGui::DragFloat3( "Camera Target", (float *) &gCameraTarget );
-#endif
         ImGui::Separator();
         ImGui::DragFloat( "Sky blur", &skysphereBlur, 0.1f, 0.0f, 9.0f );
         ImGui::DragFloat( "Sky opacity", &skysphereOpacity, 0.02f, 0.0f, 1.0f );
+#ifdef _DEBUG
+        ImGui::Separator();
+        ImGui::DragFloat( "Camera Yaw", &cameraYaw, 0.01f );
+        ImGui::DragFloat( "Camera Pitch", &cameraPitch, 0.01f );
+        ImGui::DragFloat3( "Camera Target", (float *) &gCameraTarget );
+#endif
         ImGui::EndMenu();
       }
       if ( ImGui::BeginMenu( "Shaders" ) )
@@ -549,7 +551,7 @@ int main( int argc, const char * argv[] )
       skysphereShader->SetConstant( "background_color", clearColor );
       skysphereShader->SetConstant( "skysphere_blur", skysphereBlur );
       skysphereShader->SetConstant( "skysphere_opacity", skysphereOpacity );
-      skysphereShader->SetConstant( "skysphere_rotation", -lightYaw );
+      skysphereShader->SetConstant( "skysphere_rotation", lightYaw );
 
       skysphere.Render( worldRootXYZ, skysphereShader );
 
@@ -581,7 +583,7 @@ int main( int argc, const char * argv[] )
     gCurrentShader->SetConstant( "lights[2].direction", -fillLightDirection );
     gCurrentShader->SetConstant( "lights[2].color", glm::vec3( 0.25f ) );
 
-    gCurrentShader->SetConstant( "skysphere_rotation", -lightYaw );
+    gCurrentShader->SetConstant( "skysphere_rotation", lightYaw );
 
     viewMatrix = glm::lookAtRH( cameraPosition + gCameraTarget, gCameraTarget, glm::vec3( 0.0f, 1.0f, 0.0f ) );
     gCurrentShader->SetConstant( "mat_view", viewMatrix );
