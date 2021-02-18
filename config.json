@@ -18,8 +18,17 @@
       "reflection": "Skyboxes/Barce_Rooftop_C_3k.hdr",
       "env": "Skyboxes/Barce_Rooftop_C_Env.hdr"
     },
-    {"reflection": "Skyboxes/GCanyon_C_YumaPoint_3k.hdr" },
-    {"reflection": "Skyboxes/Ridgecrest_Road_Ref.hdr" },
-    {"reflection": "Skyboxes/Road_to_MonumentValley_Ref.hdr" }
-  ],
+    {
+      "reflection": "Skyboxes/GCanyon_C_YumaPoint_3k.hdr",
+      "env": "Skyboxes/GCanyon_C_YumaPoint_Env.hdr"
+    },
+    {
+      "reflection": "Skyboxes/Ridgecrest_Road_Ref.hdr",
+      "env": "Skyboxes/Ridgecrest_Road_Env.hdr"
+    },
+    {
+      "reflection": "Skyboxes/Road_to_MonumentValley_Ref.hdr",
+      "env": "Skyboxes/Road_to_MonumentValley_Env.hdr"
+    }
+  ]
 }
