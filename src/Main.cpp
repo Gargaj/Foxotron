@@ -131,6 +131,39 @@ struct SkyImages
 
 SkyImages gSkyImages;
 
+void loadSkyImages( const char* reflectionPath, const char* envPath )
+{
+  if ( gSkyImages.reflection )
+  {
+    Renderer::ReleaseTexture( gSkyImages.reflection );
+    gSkyImages.reflection = NULL;
+  }
+  gSkyImages.reflection = Renderer::CreateRGBA8TextureFromFile( reflectionPath );
+
+  if ( gSkyImages.env )
+  {
+    Renderer::ReleaseTexture( gSkyImages.env );
+    gSkyImages.env = NULL;
+  }
+
+  if ( envPath )
+  {
+    gSkyImages.env = Renderer::CreateRGBA8TextureFromFile( envPath );
+
+    if ( gSkyImages.env )
+    {
+      glBindTexture( GL_TEXTURE_2D, gSkyImages.env->mGLTextureID );
+
+      glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
+      glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
+    }
+    else
+    {
+      printf( "Couldn't load environment map '%s'!\n", envPath );
+    }
+  }
+}
+
 int main( int argc, const char * argv[] )
 {
   jsonxx::Object options;
@@ -217,9 +250,10 @@ int main( int argc, const char * argv[] )
     0.0f,-1.0f, 0.0f, 0.0f,
     0.0f, 0.0f, 0.0f, 1.0f );
 
-  auto firstSkySphereTexture = options.get<jsonxx::Array>( "skyImages" ).get<jsonxx::Object>( 0 );
-
-  gSkyImages.reflection = Renderer::CreateRGBA8TextureFromFile( firstSkySphereTexture.get<jsonxx::String>( "reflection" ).c_str() );
+  auto firstSkyImages = options.get<jsonxx::Array>( "skyImages" ).get<jsonxx::Object>( 0 );
+  loadSkyImages(
+    firstSkyImages.get<jsonxx::String>( "reflection" ).c_str(),
+    firstSkyImages.has<jsonxx::String>( "env" ) ? firstSkyImages.get<jsonxx::String>( "env" ).c_str() : NULL );
 
   Geometry skysphere;
   skysphere.LoadMesh( "Skyboxes/skysphere.fbx" );
@@ -309,12 +343,9 @@ int main( int argc, const char * argv[] )
             bool selected = ( gSkyImages.reflection && gSkyImages.reflection->mFilename == filename );
             if ( ImGui::MenuItem( filename.c_str(), NULL, &selected ) )
             {
-              if ( gSkyImages.reflection )
-              {
-                Renderer::ReleaseTexture( gSkyImages.reflection );
-                gSkyImages.reflection = NULL;
-              }
-              gSkyImages.reflection = Renderer::CreateRGBA8TextureFromFile( filename.c_str() );
+              loadSkyImages(
+                images.get<jsonxx::String>( "reflection" ).c_str(),
+                images.has<jsonxx::String>( "env" ) ? images.get<jsonxx::String>( "env" ).c_str() : NULL );
             }
           }
         }
@@ -548,9 +579,14 @@ int main( int argc, const char * argv[] )
     gCurrentShader->SetConstant( "mat_view", viewMatrix );
 
     gCurrentShader->SetConstant( "has_tex_skysphere", gSkyImages.reflection != NULL );
+    gCurrentShader->SetConstant( "has_tex_skyenv", gSkyImages.env != NULL );
     if ( gSkyImages.reflection )
     {
       gCurrentShader->SetTexture( "tex_skysphere", gSkyImages.reflection );
+    }
+    if ( gSkyImages.env )
+    {
+      gCurrentShader->SetTexture( "tex_skyenv", gSkyImages.env );
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -581,6 +617,11 @@ int main( int argc, const char * argv[] )
   {
     Renderer::ReleaseTexture( gSkyImages.reflection );
     gSkyImages.reflection = NULL;
+  }
+  if ( gSkyImages.env )
+  {
+    Renderer::ReleaseTexture( gSkyImages.env );
+    gSkyImages.env = NULL;
   }
 
   ImGui_ImplOpenGL3_Shutdown();
