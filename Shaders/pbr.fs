@@ -119,7 +119,7 @@ vec3 sample_irradiance_slow( vec3 normal, vec3 vertex_tangent )
           cos( theta ) );
       vec3 world_space = tangent_space.x * right + tangent_space.y + up + tangent_space.z * normal;
 
-      vec3 color = sample_sky( world_space ) * cos( theta ) * sin( theta );
+      vec3 color = sample_sky( world_space );
       irradiance += color * cos( theta ) * sin( theta );
       numIrradianceSamples++;
     }
