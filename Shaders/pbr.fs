@@ -52,6 +52,8 @@ vec3 fresnel_schlick( vec3 H, vec3 V, vec3 F0 )
   return F0 + ( vec3( 1.0 ) - F0 ) * pow( 1. - cosTheta, 5.0 );
 }
 
+// A Fresnel term that dampens rough specular reflections.
+// https://seblagarde.wordpress.com/2011/08/17/hello-world/
 vec3 fresnel_schlick_roughness( vec3 H, vec3 V, vec3 F0, float roughness )
 {
   float cosTheta = clamp( dot( H, V ), 0., 1. );
@@ -96,15 +98,18 @@ vec3 sample_sky( vec3 normal )
   return texture( tex_skysphere, polar ).rgb;
 }
 
+// Takes samples around the hemisphere, converts them to radiances via weighting and
+// returns a normalized sum.
 vec3 sample_irradiance_slow( vec3 normal, vec3 vertex_tangent )
 {
-  float delta = 0.10;
+  float delta = 0.1;
 
   // Construct the tangent space using the perturbed normal and the original vertex tangent.
   // Maybe there's a better way to do this?
 
   vec3 right = cross( normal, vertex_tangent );
   vec3 up = vertex_tangent;
+
   int numIrradianceSamples = 0;
 
   vec3 irradiance = vec3(0.);
@@ -220,6 +225,9 @@ void main(void)
   }
 
   {
+    // Diffuse image based lighting.
+    // Based on https://learnopengl.com/PBR/IBL/Diffuse-irradiance
+
     vec3 irradiance = vec3(0.);
 
     bool bruteforce_irradiance = false;
@@ -233,16 +241,28 @@ void main(void)
       irradiance = sample_irradiance_fast( normal, out_tangent );
     }
 
+    // Compute the Fresnel term for a perfect mirror reflection with L = R.
+    // In this case the halfway vector H = N.
+    //
+    // We use a modified Fresnel function that dampens specular reflections of very
+    // rough surfaces to avoid too bright pixels at grazing angles.
     vec3 kS = fresnel_schlick_roughness( N, V, F0, roughness );
+
+    // Subtract the amount of reflected light (specular) to get the energy left for
+    // absorbed (diffuse) light.
     vec3 kD = vec3(1.) - kS;
+
+    // Modulate the incoming lighting with the diffuse color: some wavelengths get absorbed.
     vec3 diffuse = irradiance * baseColor;
     vec3 ambient = kD * diffuse;
+
+    // Ambient occlusion tells us the fraction of sky light that reaches this point.
     Lo += ambient * ao;
   }
 
   vec3 color = Lo;
 
-  // tonemap and apply gamma correction
+  // Tonemap and apply gamma correction.
   color = color / ( vec3(1.) + color );
   frag_color = vec4( pow( color, vec3(1. / 2.2) ), 1.0f );
 }
