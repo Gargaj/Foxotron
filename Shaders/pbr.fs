@@ -6,6 +6,8 @@ const bool use_bruteforce_irradiance = false;
 const bool use_wraparound_specular = true;
 // Dampens IBL specular ambient with AO if enabled.
 const bool use_specular_ao_attenuation = true;
+// Increases roughness if normal map has variation and was minified.
+const bool use_normal_variation_to_roughness = true;
 
 struct Light
 {
@@ -235,7 +237,10 @@ void main(void)
   else if ( has_tex_ambient )
     ao = texture( tex_ambient, out_texcoord ).x;
 
-  vec3 normalmap = normalize(texture( tex_normals, out_texcoord ).xyz * vec3(2.0) - vec3(1.0));
+  vec3 normalmap = texture( tex_normals, out_texcoord ).xyz * vec3(2.0) - vec3(1.0);
+  float normalmap_mip = textureQueryLod( tex_normals, out_texcoord ).x;
+  float normalmap_length = length(normalmap);
+  normalmap /= normalmap_length;
 
   vec3 normal = out_normal;
 
@@ -248,6 +253,15 @@ void main(void)
   }
 
   normal = normalize( normal );
+
+  if (use_normal_variation_to_roughness)
+  {
+    // Try to reduce specular aliasing by increasing roughness when minified normal maps have high variation.
+    float variation = 1. - pow( normalmap_length, 8. );
+    float minification = clamp( normalmap_mip - 2., 0., 1. );
+    roughness = mix( roughness, 1.0, variation * minification );
+  }
+
 
   vec3 N = normal;
   vec3 V = normalize( out_to_camera );
