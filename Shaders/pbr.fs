@@ -216,7 +216,7 @@ void main(void)
   vec3 baseColor = color_diffuse.rgb;
   float roughness = 1.0;
   float metallic = 0.0;
-  float ao = 0.0;
+  float ao = 1.0;
 
   if ( has_tex_albedo )
     baseColor = texture( tex_albedo, out_texcoord ).xyz;
