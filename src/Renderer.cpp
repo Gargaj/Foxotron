@@ -70,6 +70,7 @@ bool Open( RENDERER_SETTINGS * settings )
   glfwWindowHint( GLFW_STENCIL_BITS, 8 );
 
   glfwWindowHint( GLFW_DOUBLEBUFFER, GLFW_TRUE );
+  glfwWindowHint( GLFW_SAMPLES, 4 );
 
   glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 4 );
   glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 1 );
