@@ -63,6 +63,7 @@ Renderer::Texture * LoadTexture( const char * _type, const aiString & _path, con
   }
 
   printf( "[geometry] Loading %s texture: '%s'\n", _type, filename.c_str() );
+
   Renderer::Texture * texture = Renderer::CreateRGBA8TextureFromFile( filename.c_str() );
   if ( texture )
   {
@@ -77,7 +78,21 @@ Renderer::Texture * LoadTexture( const char * _type, const aiString & _path, con
     return texture;
   }
 
-  printf( "[geometry] WARNING: Texture loading failed: '%s'\n", filename.c_str() );
+  std::string extless = filename.substr( 0, filename.find_last_of( '.' ) );
+
+  const char * extensions[] = { ".hdr", ".png", ".tga", ".jpg", ".jpeg", ".bmp", NULL };
+  for ( int i = 0; extensions[ i ]; i++ )
+  {
+    std::string replacementFilename = extless + extensions[ i ];
+    texture = Renderer::CreateRGBA8TextureFromFile( replacementFilename.c_str(), _loadAsSRGB );
+    if ( texture )
+    {
+      printf( "[geometry] Replacement %s texture found: '%s'\n", _type, replacementFilename.c_str() );
+      return texture;
+    }
+  }
+
+  printf( "[geometry] WARNING: Texture loading (%s) failed: '%s'\n", _type, filename.c_str() );
   return NULL;
 }
 
