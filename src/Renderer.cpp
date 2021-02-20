@@ -407,6 +407,53 @@ Texture * CreateRGBA8TextureFromFile( const char * szFilename, const bool _loadA
   return tex;
 }
 
+Texture * CreateRG32FTextureFromRawFile( const char * szFilename, int width, int height)
+{
+  const int comp = 2;
+
+  FILE* fp = fopen( szFilename, "rb" );
+  if ( !fp )
+  {
+    return NULL;
+  }
+
+  int size = width * height * comp;
+  float* bytes = new float[ size ];
+  size_t read = fread( bytes, sizeof( float ), size, fp );
+  fclose( fp );
+
+  if ( read != size )
+  {
+    delete[] bytes;
+    return NULL;
+  }
+
+  GLenum internalFormat = GL_RG32F;
+  GLenum srcFormat = GL_RG;
+  GLenum format = GL_FLOAT;
+
+  GLuint glTexId = 0;
+  glGenTextures( 1, &glTexId );
+  glBindTexture( GL_TEXTURE_2D, glTexId );
+
+  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
+  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
+  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  glTexImage2D( GL_TEXTURE_2D, 0, internalFormat, width, height, 0, srcFormat, format, (const void*)bytes );
+
+  delete[] bytes;
+
+  Renderer::Texture * tex = new Renderer::Texture();
+  tex->mWidth = width;
+  tex->mHeight = height;
+  tex->mType = Renderer::TEXTURETYPE_2D;
+  tex->mFilename = szFilename;
+  tex->mGLTextureID = glTexId;
+  tex->mGLTextureUnit = textureUnit++;
+  return tex;
+}
 
 void ReleaseTexture( Texture * tex )
 {

@@ -123,6 +123,31 @@ void ShowMaterialInImGui( const char * _channel, Renderer::Texture * _texture )
   }
 }
 
+Renderer::Texture* gBrdfLookupTable = NULL;
+
+void loadBrdfLookupTable()
+{
+  const int width = 256;
+  const int height = 256;
+  const int comp = 2;
+  const char* filename = "Skyboxes/brdf256.bin";
+
+  if ( gBrdfLookupTable )
+  {
+    Renderer::ReleaseTexture( gBrdfLookupTable );
+    delete gBrdfLookupTable;
+    gBrdfLookupTable = NULL;
+  }
+
+  gBrdfLookupTable = Renderer::CreateRG32FTextureFromRawFile( filename, width, height );
+
+  if ( !gBrdfLookupTable )
+  {
+    printf( "Couldn't load %dx%d BRDF lookup table '%s'!\n", width, height, filename );
+  }
+}
+
+
 struct SkyImages
 {
   Renderer::Texture* reflection = NULL;
@@ -144,7 +169,7 @@ void loadSkyImages( const char* reflectionPath, const char* envPath )
   {
       glBindTexture( GL_TEXTURE_2D, gSkyImages.reflection->mGLTextureID );
 
-      glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
+      glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
       glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
   }
 
@@ -162,7 +187,7 @@ void loadSkyImages( const char* reflectionPath, const char* envPath )
     {
       glBindTexture( GL_TEXTURE_2D, gSkyImages.env->mGLTextureID );
 
-      glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
+      glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
       glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
     }
     else
@@ -262,6 +287,8 @@ int main( int argc, const char * argv[] )
   loadSkyImages(
     firstSkyImages.get<jsonxx::String>( "reflection" ).c_str(),
     firstSkyImages.has<jsonxx::String>( "env" ) ? firstSkyImages.get<jsonxx::String>( "env" ).c_str() : NULL );
+
+  loadBrdfLookupTable();
 
   Geometry skysphere;
   skysphere.LoadMesh( "Skyboxes/skysphere.fbx" );
@@ -592,12 +619,15 @@ int main( int argc, const char * argv[] )
     gCurrentShader->SetConstant( "has_tex_skyenv", gSkyImages.env != NULL );
     if ( gSkyImages.reflection )
     {
+      float mipCount = floor( log2( gSkyImages.reflection->mHeight ) );
       gCurrentShader->SetTexture( "tex_skysphere", gSkyImages.reflection );
+      gCurrentShader->SetConstant( "skysphere_mip_count", mipCount );
     }
     if ( gSkyImages.env )
     {
       gCurrentShader->SetTexture( "tex_skyenv", gSkyImages.env );
     }
+    gCurrentShader->SetTexture( "tex_brdf_lut", gBrdfLookupTable );
 
     //////////////////////////////////////////////////////////////////////////
     // Mesh render
