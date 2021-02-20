@@ -614,6 +614,7 @@ int main( int argc, const char * argv[] )
 
     viewMatrix = glm::lookAtRH( cameraPosition + gCameraTarget, gCameraTarget, glm::vec3( 0.0f, 1.0f, 0.0f ) );
     gCurrentShader->SetConstant( "mat_view", viewMatrix );
+    gCurrentShader->SetConstant( "mat_view_inverse", glm::inverse( viewMatrix ) );
 
     gCurrentShader->SetConstant( "has_tex_skysphere", gSkyImages.reflection != NULL );
     gCurrentShader->SetConstant( "has_tex_skyenv", gSkyImages.env != NULL );
