@@ -12,9 +12,11 @@ out vec3 out_binormal;
 out vec2 out_texcoord;
 out vec3 out_worldpos;
 out vec3 out_viewpos;
+out vec3 out_to_camera;
 
 uniform mat4x4 mat_projection;
 uniform mat4x4 mat_view;
+uniform mat4x4 mat_view_inverse;
 uniform mat4x4 mat_world;
 
 void main()
@@ -24,6 +26,10 @@ void main()
   out_worldpos = o.xyz;
   o = mat_view * o;
   out_viewpos = o.xyz;
+
+  vec3 to_camera = normalize( -o.xyz );
+  out_to_camera = mat3( mat_view_inverse ) * to_camera;
+
   o = mat_projection * o;
   gl_Position = o;
 

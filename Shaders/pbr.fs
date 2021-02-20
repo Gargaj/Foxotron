@@ -18,6 +18,7 @@ in vec3 out_tangent;
 in vec3 out_binormal;
 in vec2 out_texcoord;
 in vec3 out_worldpos;
+in vec3 out_to_camera;
 
 uniform vec4 color_ambient;
 uniform vec4 color_diffuse;
@@ -197,7 +198,7 @@ vec3 specular_ibl( vec3 V, vec3 N, float roughness, vec3 fresnel )
   // to avoid black pixels.
   if (use_wraparound_specular)
   {
-    NdotV = NdotV * 0.8 + 0.2;
+    NdotV = NdotV * 0.9 + 0.1;
   }
 
   NdotV = min(0.99, max(0., NdotV));
@@ -249,7 +250,7 @@ void main(void)
   normal = normalize( normal );
 
   vec3 N = normal;
-  vec3 V = normalize( camera_position - out_worldpos );
+  vec3 V = normalize( out_to_camera );
 
   vec3 Lo = vec3(0.);
   vec3 F0 = vec3(0.04);
