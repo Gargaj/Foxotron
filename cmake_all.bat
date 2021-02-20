@@ -7,6 +7,7 @@ call :build
 
 copy LICENSE _package
 copy README.md _package
+copy config.json _package
 
 mkdir _package\Shaders
 copy Shaders _package\Shaders\
