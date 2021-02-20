@@ -619,7 +619,9 @@ int main( int argc, const char * argv[] )
     gCurrentShader->SetConstant( "has_tex_skyenv", gSkyImages.env != NULL );
     if ( gSkyImages.reflection )
     {
+      float mipCount = floor( log2( gSkyImages.reflection->mHeight ) );
       gCurrentShader->SetTexture( "tex_skysphere", gSkyImages.reflection );
+      gCurrentShader->SetConstant( "skysphere_mip_count", mipCount );
     }
     if ( gSkyImages.env )
     {

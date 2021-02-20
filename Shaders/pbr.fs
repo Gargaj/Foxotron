@@ -23,6 +23,7 @@ uniform vec4 color_ambient;
 uniform vec4 color_diffuse;
 uniform vec4 color_specular;
 uniform float skysphere_rotation;
+uniform float skysphere_mip_count;
 
 uniform vec3 camera_position;
 uniform Light lights[3];
@@ -173,7 +174,7 @@ vec3 specular_ibl( vec3 V, vec3 N, float roughness, vec3 fresnel )
   // 2. Assume V = R = N so that we can just blur the skybox and sample that.
   // 3. Bake the BRDF integral into a lookup texture so that it can be computed in constant time.
   //
-  // Here we also simplify approximation 2 by using bilinear mipmaps with a magic formula instead
+  // Here we also simplify approximation #2 by using bilinear mipmaps with a magic formula instead
   // of properly convolving it with a GGX lobe.
   //
   // For details, see Brian Karis, "Real Shading in Unreal Engine 4", 2013.
@@ -183,11 +184,11 @@ vec3 specular_ibl( vec3 V, vec3 N, float roughness, vec3 fresnel )
   // TODO Again, why the sign flip for Y?
   vec2 polar = sphere_to_polar( R * vec3( 1., -1., 1. ) );
 
-  // Map roughness in range [0, 1] into a mip LOD [0, MAX_MIPS].
-  // The exponent 0.25 was chosen empirically.
+  // Map roughness from range [0, 1] into a mip LOD [0, skysphere_mip_count].
+  // The magic numbers 0.7 and 0.25 were chosen empirically.
 
-  float skysphere_max_mips = 7.;
-  float mip = skysphere_max_mips * pow(roughness, 0.25);
+  float mip = 0.7 * skysphere_mip_count * pow(roughness, 0.25);
+
   vec3 prefiltered = textureLod( tex_skysphere, polar, mip ).rgb;
 
   float NdotV = dot( N, V );
@@ -205,6 +206,7 @@ vec3 specular_ibl( vec3 V, vec3 N, float roughness, vec3 fresnel )
   // See equation (8) in Karis' course notes mentioned above.
   vec2 envBRDF = texture( tex_brdf_lut, vec2(NdotV, roughness) ).xy;
   vec3 specular = prefiltered * (fresnel * envBRDF.x + vec3(envBRDF.y));
+
   return specular;
 }
 
