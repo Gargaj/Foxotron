@@ -350,6 +350,10 @@ bool Geometry::LoadMesh( const char * _path )
     {
       material.mTextureRoughness = LoadTexture( "roughness", str, folder );
     }
+    else if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_SHININESS, 0 ), &str ) == AI_SUCCESS )
+    {
+      material.mTextureRoughness = LoadTexture( "roughness (from shininess)", str, folder );
+    }
     material.mTextureMetallic = NULL;
     if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_METALNESS, 0 ), &str ) == AI_SUCCESS )
     {
