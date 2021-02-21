@@ -292,6 +292,7 @@ int main( int argc, const char * argv[] )
   float skysphereBlur = 0.75f;
   float exposure = 1.0f;
   bool showImGui = true;
+  bool edgedFaces = false;
 
   bool xzySpace = false;
   const glm::mat4x4 xzyMatrix(
@@ -373,14 +374,19 @@ int main( int argc, const char * argv[] )
         }
         if ( ImGui::BeginMenu( "View" ) )
         {
+          ImGui::MenuItem( "Wireframe / Edged faces", NULL, &edgedFaces );
+          ImGui::Separator();
+
           ImGui::MenuItem( "Enable idle camera", NULL, &automaticCamera );
           if ( ImGui::MenuItem( "Re-center camera" ) )
           {
             gCameraTarget = ( gModel.mAABBMin + gModel.mAABBMax ) / 2.0f;
           }
           ImGui::Separator();
+
           ImGui::ColorEdit4( "Background", (float *) &clearColor, ImGuiColorEditFlags_AlphaPreviewHalf );
           ImGui::Separator();
+
           ImGui::DragFloat( "Environment exposure", &exposure, 0.01f, 0.1f, 4.0f );
           ImGui::DragFloat( "Sky blur", &skysphereBlur, 0.1f, 0.0f, 9.0f );
           ImGui::DragFloat( "Sky opacity", &skysphereOpacity, 0.02f, 0.0f, 1.0f );
@@ -700,6 +706,18 @@ int main( int argc, const char * argv[] )
     // Mesh render
 
     gModel.Render( xzySpace ? xzyMatrix : worldRootXYZ, gCurrentShader );
+
+    if ( edgedFaces )
+    {
+      glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+      glDepthFunc( GL_LEQUAL );
+
+      gCurrentShader->SetConstant( "exposure", 100.0f );
+      gModel.Render( xzySpace ? xzyMatrix : worldRootXYZ, gCurrentShader );
+
+      glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+      glDepthFunc( GL_LESS );
+    }
 
     //////////////////////////////////////////////////////////////////////////
     // End frame

@@ -87,5 +87,5 @@ void main(void)
     color += (diffusemap + specular) * ndotl * lights[ i ].color;
   }
 
-  frag_color = vec4( pow( color, vec3(1. / 2.2) ), 1.0f );
+  frag_color = vec4( pow( color * exposure, vec3(1. / 2.2) ), 1.0f );
 }
