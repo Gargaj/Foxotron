@@ -18,6 +18,10 @@ uniform vec4 color_ambient;
 uniform vec4 color_diffuse;
 uniform vec4 color_specular;
 
+uniform float skysphere_rotation;
+uniform float skysphere_mip_count;
+uniform float exposure;
+
 uniform vec3 camera_position;
 uniform Light lights[3];
 

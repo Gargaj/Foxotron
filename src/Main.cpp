@@ -285,6 +285,7 @@ int main( int argc, const char * argv[] )
   std::string supportedExtensions = Geometry::GetSupportedExtensions();
   float skysphereOpacity = 1.0f;
   float skysphereBlur = 0.75f;
+  float exposure = 1.0f;
   bool showImGui = true;
 
   bool xzySpace = false;
@@ -375,6 +376,7 @@ int main( int argc, const char * argv[] )
           ImGui::Separator();
           ImGui::ColorEdit4( "Background", (float *) &clearColor, ImGuiColorEditFlags_AlphaPreviewHalf );
           ImGui::Separator();
+          ImGui::DragFloat( "Environment exposure", &exposure, 0.01f, 0.1f, 4.0f );
           ImGui::DragFloat( "Sky blur", &skysphereBlur, 0.1f, 0.0f, 9.0f );
           ImGui::DragFloat( "Sky opacity", &skysphereOpacity, 0.02f, 0.0f, 1.0f );
 #ifdef _DEBUG
@@ -638,6 +640,7 @@ int main( int argc, const char * argv[] )
       skysphereShader->SetConstant( "skysphere_blur", skysphereBlur );
       skysphereShader->SetConstant( "skysphere_opacity", skysphereOpacity );
       skysphereShader->SetConstant( "skysphere_rotation", lightYaw );
+      skysphereShader->SetConstant( "exposure", exposure );
 
       skysphere.Render( worldRootXYZ, skysphereShader );
 
@@ -688,6 +691,7 @@ int main( int argc, const char * argv[] )
       gCurrentShader->SetTexture( "tex_skyenv", gSkyImages.env );
     }
     gCurrentShader->SetTexture( "tex_brdf_lut", gBrdfLookupTable );
+    gCurrentShader->SetConstant( "exposure", exposure );
 
     //////////////////////////////////////////////////////////////////////////
     // Mesh render

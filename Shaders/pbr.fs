@@ -27,6 +27,7 @@ uniform vec4 color_diffuse;
 uniform vec4 color_specular;
 uniform float skysphere_rotation;
 uniform float skysphere_mip_count;
+uniform float exposure;
 
 uniform vec3 camera_position;
 uniform Light lights[3];
@@ -107,7 +108,7 @@ vec2 sphere_to_polar( vec3 normal )
 vec3 sample_sky( vec3 normal )
 {
   vec2 polar = sphere_to_polar( normal * vec3( 1., -1., 1. ) );
-  return texture( tex_skysphere, polar ).rgb;
+  return texture( tex_skysphere, polar ).rgb * exposure;
 }
 
 // Takes samples around the hemisphere, converts them to radiances via weighting and
@@ -155,14 +156,14 @@ vec3 sample_irradiance_fast( vec3 normal, vec3 vertex_tangent )
     vec2 polar = sphere_to_polar( normal * vec3( 1., -1., 1. ) );
     // HACK: Sample a smaller mip here to avoid high frequency color variations on detailed normal
     //       mapped areas.
-    return textureLod( tex_skyenv, polar, 2 ).rgb;
+    return textureLod( tex_skyenv, polar, 2 ).rgb * exposure;
   }
   else
   {
     int level = 8;
     vec2 polar = sphere_to_polar( normal * vec3( 1., -1., 1. ) );
     // TODO how to properly normalize a single mipmap tap to irradiance?
-    return textureLod( tex_skysphere, polar, level ).rgb;
+    return textureLod( tex_skysphere, polar, level ).rgb * exposure;
   }
 }
 
@@ -192,7 +193,7 @@ vec3 specular_ibl( vec3 V, vec3 N, float roughness, vec3 fresnel )
 
   float mip = 0.7 * skysphere_mip_count * pow(roughness, 0.25);
 
-  vec3 prefiltered = textureLod( tex_skysphere, polar, mip ).rgb;
+  vec3 prefiltered = textureLod( tex_skysphere, polar, mip ).rgb * exposure;
 
   float NdotV = dot( N, V );
 
