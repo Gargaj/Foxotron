@@ -23,12 +23,8 @@
       "env": "Skyboxes/GCanyon_C_YumaPoint_Env.hdr"
     },
     {
-      "reflection": "Skyboxes/Ridgecrest_Road_Ref.hdr",
-      "env": "Skyboxes/Ridgecrest_Road_Env.hdr"
-    },
-    {
-      "reflection": "Skyboxes/Road_to_MonumentValley_Ref.hdr",
-      "env": "Skyboxes/Road_to_MonumentValley_Env.hdr"
-    }
+      "reflection": "Skyboxes/Tokyo_BigSight_3k.hdr",
+      "env": "Skyboxes/Tokyo_BigSight_Env.hdr"
+    }    
   ]
 }
