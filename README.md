@@ -4,10 +4,19 @@
 
 ASSIMP based general purpose model viewer ("turntable") created for the Revision 2021 3D Graphics Competition
 
-## Keyboard shortcuts
+## Usage
+Check [the wiki](https://github.com/Gargaj/Foxotron/wiki) for information on how to use it.
+
+### Keyboard shortcuts
 * F11: Toggle menu
 * F: Refocus camera on mesh
 * Alt-F4: Enter hyberwormtunnel
+
+## Requirements
+OpenGL 4.1 is required.
+
+## Building
+You're gonna need [CMAKE](https://cmake.org/)
 
 ## Credits
 
