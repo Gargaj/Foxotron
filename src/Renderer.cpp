@@ -93,7 +93,7 @@ bool Open( RENDERER_SETTINGS * _settings )
 
   GLFWmonitor * monitor = _settings->mWindowMode == RENDERER_WINDOWMODE_FULLSCREEN ? glfwGetPrimaryMonitor() : NULL;
 
-  mWindow = glfwCreateWindow( nWidth, nHeight, "FOXOTRON v0.0.1", monitor, NULL );
+  mWindow = glfwCreateWindow( nWidth, nHeight, "FOXOTRON is a thing", monitor, NULL );
   if ( !mWindow )
   {
     printf( "[GLFW] Window creation failed\n" );
