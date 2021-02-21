@@ -302,7 +302,7 @@ void main(void)
     }
   }
 
-  vec3 ambient = vec3(0.);
+  vec3 ambient = sample_colormap( map_ambient, out_texcoord ).xyz;
 
   if (use_ibl)
   {
