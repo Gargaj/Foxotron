@@ -33,19 +33,24 @@ public:
     glm::vec3 mAABBMin;
     glm::vec3 mAABBMax;
   };
+  struct ColorMap
+  {
+    ColorMap() : mValid( false ), mTexture( nullptr ), mColor( 0.0f ) {}
+    bool mValid;
+    Renderer::Texture * mTexture;
+    glm::vec4 mColor;
+  };
   struct Material
   {
     std::string mName;
-    Renderer::Texture * mTextureDiffuse;
-    Renderer::Texture * mTextureNormals;
-    Renderer::Texture * mTextureSpecular;
-    Renderer::Texture * mTextureAlbedo;
-    Renderer::Texture * mTextureRoughness;
-    Renderer::Texture * mTextureMetallic;
-    Renderer::Texture * mTextureAO;
-    glm::vec4 mColorAmbient;
-    glm::vec4 mColorDiffuse;
-    glm::vec4 mColorSpecular;
+    ColorMap mColorMapDiffuse;
+    ColorMap mColorMapNormals;
+    ColorMap mColorMapSpecular;
+    ColorMap mColorMapAlbedo;
+    ColorMap mColorMapRoughness;
+    ColorMap mColorMapMetallic;
+    ColorMap mColorMapAO;
+    ColorMap mColorMapAmbient;
 
     float mSpecularShininess;
   };
@@ -60,6 +65,8 @@ public:
 
   void __SetupVertexArray( Renderer::Shader * _shader, const char * name, int sizeInFloats, int & offsetInFloats);
   void RebindVertexArray( Renderer::Shader * _shader );
+
+  void SetColorMap( Renderer::Shader * _shader, const char * _name, const ColorMap & _colorMap );
 
   static std::string GetSupportedExtensions();
 

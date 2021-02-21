@@ -109,17 +109,22 @@ void ShowNodeInImGui( int _parentID )
   }
 }
 
-void ShowMaterialInImGui( const char * _channel, Renderer::Texture * _texture )
+void ShowColorMapInImGui( const char * _channel, Geometry::ColorMap & _colorMap )
 {
-  if ( !_texture )
+  if ( !_colorMap.mValid )
   {
     return;
   }
+
   if ( ImGui::BeginTabItem( _channel ) )
   {
-    ImGui::Text( "Texture: %s", _texture->mFilename.c_str() );
-    ImGui::Text( "Dimensions: %d x %d", _texture->mWidth, _texture->mHeight );
-    ImGui::Image( (void *) (intptr_t) _texture->mGLTextureID, ImVec2( 512.0f, 512.0f ) );
+    ImGui::ColorEdit4( "Color", (float *) &_colorMap.mColor, ImGuiColorEditFlags_AlphaPreviewHalf );
+    if ( _colorMap.mTexture )
+    {
+      ImGui::Text( "Texture: %s", _colorMap.mTexture->mFilename.c_str() );
+      ImGui::Text( "Dimensions: %d x %d", _colorMap.mTexture->mWidth, _colorMap.mTexture->mHeight );
+      ImGui::Image( (void *) (intptr_t) _colorMap.mTexture->mGLTextureID, ImVec2( 512.0f, 512.0f ) );
+    }
     ImGui::EndTabItem();
   }
 }
@@ -470,18 +475,16 @@ int main( int argc, const char * argv[] )
           {
             ImGui::Indent();
             ImGui::Text( "Specular shininess: %g", it->second.mSpecularShininess );
-            ImGui::ColorEdit4( "Ambient color", (float *) &it->second.mColorAmbient, ImGuiColorEditFlags_AlphaPreviewHalf );
-            ImGui::ColorEdit4( "Diffuse color", (float *) &it->second.mColorDiffuse, ImGuiColorEditFlags_AlphaPreviewHalf );
-            ImGui::ColorEdit4( "Specular color", (float *) &it->second.mColorSpecular, ImGuiColorEditFlags_AlphaPreviewHalf );
             if ( ImGui::BeginTabBar( it->second.mName.c_str() ) )
             {
-              ShowMaterialInImGui( "Diffuse", it->second.mTextureDiffuse );
-              ShowMaterialInImGui( "Normals", it->second.mTextureNormals );
-              ShowMaterialInImGui( "Specular", it->second.mTextureSpecular );
-              ShowMaterialInImGui( "Albedo", it->second.mTextureAlbedo );
-              ShowMaterialInImGui( "Metallic", it->second.mTextureMetallic );
-              ShowMaterialInImGui( "Roughness", it->second.mTextureRoughness );
-              ShowMaterialInImGui( "AO", it->second.mTextureAO );
+              ShowColorMapInImGui( "Ambient", it->second.mColorMapAmbient );
+              ShowColorMapInImGui( "Diffuse", it->second.mColorMapDiffuse );
+              ShowColorMapInImGui( "Normals", it->second.mColorMapNormals );
+              ShowColorMapInImGui( "Specular", it->second.mColorMapSpecular );
+              ShowColorMapInImGui( "Albedo", it->second.mColorMapAlbedo );
+              ShowColorMapInImGui( "Metallic", it->second.mColorMapMetallic );
+              ShowColorMapInImGui( "Roughness", it->second.mColorMapRoughness );
+              ShowColorMapInImGui( "AO", it->second.mColorMapAO );
               ImGui::EndTabBar();
             }
             ImGui::Unindent();

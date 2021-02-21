@@ -15,6 +15,13 @@ struct Light
   vec3 color;
 };
 
+struct ColorMap
+{
+  bool has_tex;
+  sampler2D tex;
+  vec4 color;
+};
+
 in vec3 out_normal;
 in vec3 out_tangent;
 in vec3 out_binormal;
@@ -22,9 +29,6 @@ in vec2 out_texcoord;
 in vec3 out_worldpos;
 in vec3 out_to_camera;
 
-uniform vec4 color_ambient;
-uniform vec4 color_diffuse;
-uniform vec4 color_specular;
 uniform float skysphere_rotation;
 uniform float skysphere_mip_count;
 uniform float exposure;
@@ -35,30 +39,28 @@ uniform Light lights[3];
 uniform sampler2D tex_skysphere;
 uniform sampler2D tex_skyenv;
 uniform sampler2D tex_brdf_lut;
-uniform sampler2D tex_albedo;
-uniform sampler2D tex_diffuse;
-uniform sampler2D tex_specular;
-uniform sampler2D tex_normals;
-uniform sampler2D tex_roughness;
-uniform sampler2D tex_metallic;
-uniform sampler2D tex_ao;
-uniform sampler2D tex_ambient;
 
 uniform bool has_tex_skysphere;
 uniform bool has_tex_skyenv;
-uniform bool has_tex_diffuse;
-uniform bool has_tex_normals;
-uniform bool has_tex_specular;
-uniform bool has_tex_albedo;
-uniform bool has_tex_roughness;
-uniform bool has_tex_metallic;
-uniform bool has_tex_ao;
-uniform bool has_tex_ambient;
+
+uniform ColorMap map_albedo;
+uniform ColorMap map_diffuse;
+uniform ColorMap map_specular;
+uniform ColorMap map_normals;
+uniform ColorMap map_roughness;
+uniform ColorMap map_metallic;
+uniform ColorMap map_ao;
+uniform ColorMap map_ambient;
 
 out vec4 frag_color;
 
 const float PI = 3.1415926536;
 
+vec4 sample_colormap( ColorMap map, vec2 uv ) 
+{
+  return map.has_tex ? texture( map.tex, uv ) : map.color; 
+}
+ 
 vec3 fresnel_schlick( vec3 H, vec3 V, vec3 F0 )
 {
   float cosTheta = clamp( dot( H, V ), 0., 1. );
@@ -217,35 +219,32 @@ vec3 specular_ibl( vec3 V, vec3 N, float roughness, vec3 fresnel )
 
 void main(void)
 {
-  vec3 baseColor = color_diffuse.rgb;
+  vec3 baseColor = vec3( 0.5, 0.5, 0.5 );
   float roughness = 1.0;
   float metallic = 0.0;
   float ao = 1.0;
 
-  if ( has_tex_albedo )
-    baseColor = texture( tex_albedo, out_texcoord ).xyz;
-  else if ( has_tex_diffuse )
-    baseColor = texture( tex_diffuse, out_texcoord ).xyz;
+  if ( map_albedo.has_tex )
+    baseColor = sample_colormap( map_albedo, out_texcoord ).xyz;
+  else
+    baseColor = sample_colormap( map_diffuse, out_texcoord ).xyz;
 
-  if ( has_tex_roughness )
-    roughness = texture( tex_roughness, out_texcoord ).x;
+  roughness = sample_colormap( map_roughness, out_texcoord ).x;
+  metallic = sample_colormap( map_metallic, out_texcoord ).x;
+  
+  if ( map_ao.has_tex )
+    ao = sample_colormap( map_ao, out_texcoord ).x;
+  else if ( map_ambient.has_tex )
+    ao = sample_colormap( map_ambient, out_texcoord ).x;
 
-  if ( has_tex_metallic )
-    metallic = texture( tex_metallic, out_texcoord ).x;
-
-  if ( has_tex_ao )
-    ao = texture( tex_ao, out_texcoord ).x;
-  else if ( has_tex_ambient )
-    ao = texture( tex_ambient, out_texcoord ).x;
-
-  vec3 normalmap = texture( tex_normals, out_texcoord ).xyz * vec3(2.0) - vec3(1.0);
-  float normalmap_mip = textureQueryLod( tex_normals, out_texcoord ).x;
+  vec3 normalmap = texture( map_normals.tex, out_texcoord ).xyz * vec3(2.0) - vec3(1.0);
+  float normalmap_mip = textureQueryLod( map_normals.tex, out_texcoord ).x;
   float normalmap_length = length(normalmap);
   normalmap /= normalmap_length;
 
   vec3 normal = out_normal;
 
-  if (has_tex_normals)
+  if ( map_normals.has_tex )
   {
     // Mikkelsen's tangent space normal map decoding. See http://mikktspace.com/ for rationale.
     vec3 bi = cross( out_normal, out_tangent );
@@ -303,7 +302,7 @@ void main(void)
     }
   }
 
-  vec3 ambient = color_ambient.rgb;
+  vec3 ambient = vec3(0.);
 
   if (use_ibl)
   {

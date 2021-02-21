@@ -96,6 +96,43 @@ Renderer::Texture * LoadTexture( const char * _type, const aiString & _path, con
   return NULL;
 }
 
+bool LoadColorMap( aiMaterial * _material, Geometry::ColorMap & _colorMap, aiTextureType _semantic, const char * _semanticText, const std::string & _folder, bool _loadAsSRGB = false )
+{
+  bool success = false;
+  _colorMap.mTexture = NULL;
+
+  aiString str;
+  if ( aiGetMaterialString( _material, AI_MATKEY_TEXTURE( _semantic, 0 ), &str ) == AI_SUCCESS )
+  {
+    _colorMap.mTexture = LoadTexture( _semanticText, str, _folder, _loadAsSRGB );
+    _colorMap.mValid = true;
+    success = true;
+  }
+
+  aiColor4D color;
+  aiReturn result = AI_FAILURE;
+  switch ( _semantic )
+  {
+    case aiTextureType_AMBIENT:
+      result = aiGetMaterialColor( _material, AI_MATKEY_COLOR_AMBIENT, &color );
+      break;
+    case aiTextureType_DIFFUSE:
+    case aiTextureType_BASE_COLOR:
+      result = aiGetMaterialColor( _material, AI_MATKEY_COLOR_DIFFUSE, &color );
+      break;
+    case aiTextureType_SPECULAR:
+      result = aiGetMaterialColor( _material, AI_MATKEY_COLOR_SPECULAR, &color );
+      break;
+  };
+  if ( result == AI_SUCCESS )
+  {
+    memcpy( &_colorMap.mColor, &color.r, sizeof( float ) * 4 );
+    _colorMap.mValid = true;
+  }
+
+  return success;
+}
+
 int gNodeCount = 0;
 void ParseNode( Geometry * _geometry, const aiScene * scene, aiNode * sceneNode, int nParentIndex )
 {
@@ -336,49 +373,29 @@ bool Geometry::LoadMesh( const char * _path )
     material.mName = std::string( str.data, str.length );
     printf( "[geometry] Loading material #%d: '%s'\n", i + 1, material.mName.c_str() );
 
-    material.mTextureDiffuse = NULL;
-    if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_DIFFUSE, 0 ), &str ) == AI_SUCCESS )
+    material.mColorMapDiffuse.mColor = glm::vec4( 0.5f );
+    material.mColorMapNormals.mColor = glm::vec4( 0.0f );
+    material.mColorMapSpecular.mColor = glm::vec4( 0.0f );
+    material.mColorMapAlbedo.mColor = glm::vec4( 0.5f );
+    material.mColorMapRoughness.mColor = glm::vec4( 1.0f );
+    material.mColorMapMetallic.mColor = glm::vec4( 0.0f );
+    material.mColorMapAO.mColor = glm::vec4( 1.0f );
+    material.mColorMapAmbient.mColor = glm::vec4( 0.0f );
+
+    LoadColorMap( scene->mMaterials[ i ], material.mColorMapDiffuse, aiTextureType_DIFFUSE, "diffuse", folder, true );
+    if ( !LoadColorMap( scene->mMaterials[ i ], material.mColorMapNormals, aiTextureType_NORMAL_CAMERA, "normals", folder ) )
     {
-      material.mTextureDiffuse = LoadTexture( "diffuse", str, folder, true );
+      LoadColorMap( scene->mMaterials[ i ], material.mColorMapNormals, aiTextureType_NORMALS, "normals", folder );
     }
-    material.mTextureNormals = NULL;
-    if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_NORMAL_CAMERA, 0 ), &str ) == AI_SUCCESS )
+    LoadColorMap( scene->mMaterials[ i ], material.mColorMapSpecular, aiTextureType_SPECULAR, "specular", folder );
+    LoadColorMap( scene->mMaterials[ i ], material.mColorMapAlbedo, aiTextureType_BASE_COLOR, "albedo", folder );
+    if ( !LoadColorMap( scene->mMaterials[ i ], material.mColorMapRoughness, aiTextureType_DIFFUSE_ROUGHNESS, "roughness", folder ) )
     {
-      material.mTextureNormals = LoadTexture( "normals", str, folder );
+      LoadColorMap( scene->mMaterials[ i ], material.mColorMapRoughness, aiTextureType_SHININESS, "roughness (from shininess)", folder );
     }
-    else if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_NORMALS, 0 ), &str ) == AI_SUCCESS )
-    {
-      material.mTextureNormals = LoadTexture( "normals", str, folder );
-    }
-    material.mTextureSpecular = NULL;
-    if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_SPECULAR, 0 ), &str ) == AI_SUCCESS )
-    {
-      material.mTextureSpecular = LoadTexture( "specular", str, folder );
-    }
-    material.mTextureAlbedo = NULL;
-    if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_BASE_COLOR, 0 ), &str ) == AI_SUCCESS )
-    {
-      material.mTextureAlbedo = LoadTexture( "albedo", str, folder, true );
-    }
-    material.mTextureRoughness = NULL;
-    if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_DIFFUSE_ROUGHNESS, 0 ), &str ) == AI_SUCCESS )
-    {
-      material.mTextureRoughness = LoadTexture( "roughness", str, folder );
-    }
-    else if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_SHININESS, 0 ), &str ) == AI_SUCCESS )
-    {
-      material.mTextureRoughness = LoadTexture( "roughness (from shininess)", str, folder );
-    }
-    material.mTextureMetallic = NULL;
-    if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_METALNESS, 0 ), &str ) == AI_SUCCESS )
-    {
-      material.mTextureMetallic = LoadTexture( "metallic", str, folder );
-    }
-    material.mTextureAO = NULL;
-    if ( aiGetMaterialString( scene->mMaterials[ i ], AI_MATKEY_TEXTURE( aiTextureType_AMBIENT_OCCLUSION, 0 ), &str ) == AI_SUCCESS )
-    {
-      material.mTextureAO = LoadTexture( "ao", str, folder );
-    }
+    LoadColorMap( scene->mMaterials[ i ], material.mColorMapMetallic, aiTextureType_METALNESS, "metallic", folder );
+    LoadColorMap( scene->mMaterials[ i ], material.mColorMapAO, aiTextureType_AMBIENT_OCCLUSION, "AO", folder );
+    LoadColorMap( scene->mMaterials[ i ], material.mColorMapAmbient, aiTextureType_AMBIENT, "ambient", folder );
 
     float f = 0.0f;
 
@@ -386,24 +403,6 @@ bool Geometry::LoadMesh( const char * _path )
     if ( aiGetMaterialFloat( scene->mMaterials[ i ], AI_MATKEY_SHININESS, &f ) == AI_SUCCESS )
     {
       material.mSpecularShininess = f;
-    }
-
-    aiColor4D color;
-
-		material.mColorAmbient = glm::vec4( 0.0f, 0.0f, 0.0f, 0.0f );
-		if ( aiGetMaterialColor( scene->mMaterials[ i ], AI_MATKEY_COLOR_AMBIENT, &color ) == AI_SUCCESS )
-		{
-			memcpy( &material.mColorAmbient.x, &color.r, sizeof( float ) * 4 );
-		}
-		material.mColorDiffuse = glm::vec4( 0.5f, 0.5f, 0.5f, 0.5f );
-		if ( aiGetMaterialColor( scene->mMaterials[ i ], AI_MATKEY_COLOR_DIFFUSE, &color ) == AI_SUCCESS )
-		{
-			memcpy( &material.mColorDiffuse.x, &color.r, sizeof( float ) * 4 );
-		}
-    material.mColorSpecular = glm::vec4( 1.0f, 1.0f, 1.0f, 1.0f );
-    if ( aiGetMaterialColor( scene->mMaterials[ i ], AI_MATKEY_COLOR_SPECULAR, &color ) == AI_SUCCESS )
-    {
-      memcpy( &material.mColorSpecular.x, &color.r, sizeof( float ) * 4 );
     }
 
     mMaterials.insert( { i, material } );
@@ -425,33 +424,37 @@ void Geometry::UnloadMesh()
 
   for ( std::map<int, Material>::iterator it = mMaterials.begin(); it != mMaterials.end(); it++ )
   {
-    if ( it->second.mTextureDiffuse )
+    if ( it->second.mColorMapDiffuse.mTexture)
     {
-      Renderer::ReleaseTexture( it->second.mTextureDiffuse );
+      Renderer::ReleaseTexture( it->second.mColorMapDiffuse.mTexture);
     }
-    if ( it->second.mTextureNormals )
+    if ( it->second.mColorMapNormals.mTexture)
     {
-      Renderer::ReleaseTexture( it->second.mTextureNormals );
+      Renderer::ReleaseTexture( it->second.mColorMapNormals.mTexture);
     }
-    if ( it->second.mTextureSpecular )
+    if ( it->second.mColorMapSpecular.mTexture)
     {
-      Renderer::ReleaseTexture( it->second.mTextureSpecular );
+      Renderer::ReleaseTexture( it->second.mColorMapSpecular.mTexture);
     }
-    if ( it->second.mTextureAlbedo )
+    if ( it->second.mColorMapAlbedo.mTexture)
     {
-      Renderer::ReleaseTexture( it->second.mTextureAlbedo );
+      Renderer::ReleaseTexture( it->second.mColorMapAlbedo.mTexture);
     }
-    if ( it->second.mTextureRoughness )
+    if ( it->second.mColorMapRoughness.mTexture)
     {
-      Renderer::ReleaseTexture( it->second.mTextureRoughness );
+      Renderer::ReleaseTexture( it->second.mColorMapRoughness.mTexture);
     }
-    if ( it->second.mTextureMetallic )
+    if ( it->second.mColorMapMetallic.mTexture)
     {
-      Renderer::ReleaseTexture( it->second.mTextureMetallic );
+      Renderer::ReleaseTexture( it->second.mColorMapMetallic.mTexture);
     }
-    if ( it->second.mTextureAO )
+    if ( it->second.mColorMapAO.mTexture )
     {
-      Renderer::ReleaseTexture( it->second.mTextureAO );
+      Renderer::ReleaseTexture( it->second.mColorMapAO.mTexture );
+    }
+    if ( it->second.mColorMapAmbient.mTexture )
+    {
+      Renderer::ReleaseTexture( it->second.mColorMapAmbient.mTexture );
     }
   }
   mMaterials.clear();
@@ -482,47 +485,16 @@ void Geometry::Render( const glm::mat4x4 & _worldRootMatrix, Renderer::Shader * 
       const Geometry::Mesh & mesh = mMeshes[ it->second.mMeshes[ i ] ];
       const Geometry::Material & material = mMaterials[ mesh.mMaterialIndex ];
 
-      _shader->SetConstant( "color_ambient", material.mColorAmbient );
-      _shader->SetConstant( "color_diffuse", material.mColorDiffuse );
-      _shader->SetConstant( "color_specular", material.mColorSpecular );
       _shader->SetConstant( "specular_shininess", material.mSpecularShininess );
 
-      _shader->SetConstant( "has_tex_diffuse", material.mTextureDiffuse != NULL );
-      _shader->SetConstant( "has_tex_normals", material.mTextureNormals != NULL );
-      _shader->SetConstant( "has_tex_specular", material.mTextureSpecular != NULL );
-      _shader->SetConstant( "has_tex_albedo", material.mTextureAlbedo != NULL );
-      _shader->SetConstant( "has_tex_roughness", material.mTextureRoughness != NULL );
-      _shader->SetConstant( "has_tex_metallic", material.mTextureMetallic != NULL );
-      _shader->SetConstant( "has_tex_ao", material.mTextureAO != NULL );
-
-      if ( material.mTextureDiffuse )
-      {
-        _shader->SetTexture( "tex_diffuse", material.mTextureDiffuse );
-      }
-      if ( material.mTextureNormals )
-      {
-        _shader->SetTexture( "tex_normals", material.mTextureNormals );
-      }
-      if ( material.mTextureSpecular )
-      {
-        _shader->SetTexture( "tex_specular", material.mTextureSpecular );
-      }
-      if ( material.mTextureAlbedo )
-      {
-        _shader->SetTexture( "tex_albedo", material.mTextureAlbedo );
-      }
-      if ( material.mTextureRoughness )
-      {
-        _shader->SetTexture( "tex_roughness", material.mTextureRoughness );
-      }
-      if ( material.mTextureMetallic )
-      {
-        _shader->SetTexture( "tex_metallic", material.mTextureMetallic );
-      }
-      if ( material.mTextureAO )
-      {
-        _shader->SetTexture( "tex_ao", material.mTextureAO );
-      }
+      SetColorMap( _shader, "map_diffuse", material.mColorMapDiffuse );
+      SetColorMap( _shader, "map_normals", material.mColorMapNormals );
+      SetColorMap( _shader, "map_specular", material.mColorMapSpecular );
+      SetColorMap( _shader, "map_albedo", material.mColorMapAlbedo );
+      SetColorMap( _shader, "map_roughness", material.mColorMapRoughness );
+      SetColorMap( _shader, "map_metallic", material.mColorMapMetallic );
+      SetColorMap( _shader, "map_ao", material.mColorMapAO );
+      SetColorMap( _shader, "map_ambient", material.mColorMapAmbient );
 
       glBindVertexArray( mesh.mVertexArrayObject );
 
@@ -562,6 +534,24 @@ void Geometry::RebindVertexArray( Renderer::Shader * _shader )
     __SetupVertexArray( _shader, "in_binormal", 3, offset );
     __SetupVertexArray( _shader, "in_texcoord", 2, offset );
   }
+}
+
+void Geometry::SetColorMap( Renderer::Shader * _shader, const char * _name, const ColorMap & _colorMap )
+{
+  char sz[ 64 ];
+
+  snprintf( sz, 64, "%s.color", _name );
+  _shader->SetConstant( sz, _colorMap.mColor );
+
+  snprintf( sz, 64, "%s.has_tex", _name );
+  _shader->SetConstant( sz, _colorMap.mTexture != NULL );
+
+  if ( _colorMap.mTexture )
+  {
+    snprintf( sz, 64, "%s.tex", _name );
+    _shader->SetTexture( sz, _colorMap.mTexture );
+  }
+
 }
 
 std::string Geometry::GetSupportedExtensions()

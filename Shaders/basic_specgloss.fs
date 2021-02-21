@@ -6,6 +6,13 @@ struct Light
   vec3 color;
 };
 
+struct ColorMap
+{
+  bool has_tex;
+  sampler2D tex;
+  vec4 color;
+};
+
 in vec3 out_normal;
 in vec3 out_tangent;
 in vec3 out_binormal;
@@ -14,9 +21,6 @@ in vec3 out_worldpos;
 in vec3 out_to_camera;
 
 uniform float specular_shininess;
-uniform vec4 color_ambient;
-uniform vec4 color_diffuse;
-uniform vec4 color_specular;
 
 uniform float skysphere_rotation;
 uniform float skysphere_mip_count;
@@ -25,20 +29,22 @@ uniform float exposure;
 uniform vec3 camera_position;
 uniform Light lights[3];
 
-uniform sampler2D tex_diffuse;
-uniform sampler2D tex_normals;
-uniform sampler2D tex_specular;
-
-uniform bool has_tex_diffuse;
-uniform bool has_tex_normals;
-uniform bool has_tex_specular;
-uniform bool has_tex_albedo;
-uniform bool has_tex_roughness;
-uniform bool has_tex_metallic;
-uniform bool has_tex_ao;
+uniform ColorMap map_albedo;
+uniform ColorMap map_diffuse;
+uniform ColorMap map_specular;
+uniform ColorMap map_normals;
+uniform ColorMap map_roughness;
+uniform ColorMap map_metallic;
+uniform ColorMap map_ao;
+uniform ColorMap map_ambient;
 
 out vec4 frag_color;
 
+vec4 sample_colormap( ColorMap map, vec2 uv) 
+{
+  return map.has_tex ? texture( map.tex, uv ) : map.color; 
+}
+ 
 float calculate_specular( vec3 normal, vec3 light_direction )
 {
   vec3 V = normalize( out_to_camera );
@@ -52,13 +58,13 @@ float calculate_specular( vec3 normal, vec3 light_direction )
 
 void main(void)
 {
-  vec3 diffuse = texture( tex_diffuse, out_texcoord ).xyz;
-  vec3 normalmap = normalize(texture( tex_normals, out_texcoord ).xyz * vec3(2.0) - vec3(1.0));
-  vec3 specular = has_tex_specular ? texture( tex_specular, out_texcoord ).xyz * color_specular.rgb : vec3(0.0f);
+  vec3 ambient = sample_colormap( map_ambient, out_texcoord ).xyz;
+  vec3 diffusemap = sample_colormap( map_diffuse, out_texcoord ).xyz;
+  vec3 normalmap = normalize(texture( map_normals.tex, out_texcoord ).xyz * vec3(2.0) - vec3(1.0));
+  vec4 specularmap = sample_colormap( map_specular, out_texcoord );
 
   vec3 normal = out_normal;
-
-  if (has_tex_normals)
+  if ( map_normals.has_tex )
   {
     // Mikkelsen's tangent space normal map decoding. See http://mikktspace.com/ for rationale.
     vec3 bi = cross( out_normal, out_tangent );
@@ -68,15 +74,14 @@ void main(void)
 
   normal = normalize( normal );
 
-  vec3 color = color_ambient.rgb;
+  vec3 color = ambient;
   for ( int i = 0; i < lights.length(); i++ )
   {
     float ndotl = clamp( dot( normal, -normalize( lights[ i ].direction ) ), 0.0, 1.0 );
 
-    vec3 diffuse = has_tex_diffuse ? diffuse : color_diffuse.rgb;
-    vec3 specular = color_specular.rgb * calculate_specular( normal, lights[ i ].direction ) * color_specular.a;
+    vec3 specular = specularmap.rgb * calculate_specular( normal, lights[ i ].direction ) * specularmap.a;
     
-    color += (diffuse + specular) * ndotl * lights[ i ].color;
+    color += (diffusemap + specular) * ndotl * lights[ i ].color;
   }
 
   frag_color = vec4( pow( color, vec3(1. / 2.2) ), 1.0f );
