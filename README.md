@@ -4,6 +4,11 @@
 
 ASSIMP based general purpose model viewer ("turntable") created for the Revision 2021 3D Graphics Competition
 
+## Keyboard shortcuts
+* F11: Toggle menu
+* F: Refocus camera on mesh
+* Alt-F4: Enter hyberwormtunnel
+
 ## Credits
 
 ### Libraries and other included software

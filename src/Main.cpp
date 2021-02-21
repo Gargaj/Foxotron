@@ -275,8 +275,8 @@ int main( int argc, const char * argv[] )
   bool rotatingCamera = false;
   bool movingCamera = false;
   bool movingLight = false;
-  float cameraYaw = 0.0f;
-  float cameraPitch = 0.0f;
+  float cameraYaw = glm::pi<float>() / 4.0f;
+  float cameraPitch = 0.25f;
   float lightYaw = 0.0f;
   float lightPitch = 0.0f;
   float mouseClickPosX = 0.0f;
@@ -285,6 +285,7 @@ int main( int argc, const char * argv[] )
   std::string supportedExtensions = Geometry::GetSupportedExtensions();
   float skysphereOpacity = 1.0f;
   float skysphereBlur = 0.75f;
+  bool showImGui = true;
 
   bool xzySpace = false;
   const glm::mat4x4 xzyMatrix(
@@ -322,91 +323,106 @@ int main( int argc, const char * argv[] )
 
     bool openFileDialog = false;
     static bool showModelInfo = false;
-    if ( ImGui::BeginMainMenuBar() )
+
+    if ( ImGui::IsKeyPressed( GLFW_KEY_F, false ) )
     {
-      if ( ImGui::BeginMenu( "File" ) )
+      gCameraTarget = ( gModel.mAABBMin + gModel.mAABBMax ) / 2.0f;
+      gCameraDistance = glm::length( gCameraTarget - gModel.mAABBMin ) * 4.0f;
+      cameraYaw = glm::pi<float>() / 4.0f;
+      cameraPitch = 0.25f;
+    }
+    if ( ImGui::IsKeyPressed( GLFW_KEY_F11, false ) )
+    {
+      showImGui = !showImGui;
+    }
+    if ( showImGui )
+    {
+      if ( ImGui::BeginMainMenuBar() )
       {
-        if ( ImGui::MenuItem( "Open model..." ) )
+        if ( ImGui::BeginMenu( "File" ) )
         {
-          openFileDialog = true;
-        }
-        ImGui::Separator();
-        if ( ImGui::MenuItem( "Exit" ) )
-        {
-          appWantsToQuit = true;
-        }
-        ImGui::EndMenu();
-      }
-      if ( ImGui::BeginMenu( "Model" ) )
-      {
-        ImGui::MenuItem( "Show model info", NULL, &showModelInfo );
-        ImGui::Separator();
-
-        bool xyzSpace = !xzySpace;
-        if ( ImGui::MenuItem( "XYZ space", NULL, &xyzSpace ) )
-        {
-          xzySpace = !xzySpace;
-        }
-        ImGui::MenuItem( "XZY space", NULL, &xzySpace );
-        ImGui::EndMenu();
-      }
-      if ( ImGui::BeginMenu( "View" ) )
-      {
-        ImGui::MenuItem( "Enable idle camera", NULL, &automaticCamera );
-        if ( ImGui::MenuItem( "Re-center camera" ) )
-        {
-          gCameraTarget = ( gModel.mAABBMin + gModel.mAABBMax ) / 2.0f;
-        }
-        ImGui::Separator();
-        ImGui::ColorEdit4( "Background", (float *) &clearColor, ImGuiColorEditFlags_AlphaPreviewHalf );
-        ImGui::Separator();
-        ImGui::DragFloat( "Sky blur", &skysphereBlur, 0.1f, 0.0f, 9.0f );
-        ImGui::DragFloat( "Sky opacity", &skysphereOpacity, 0.02f, 0.0f, 1.0f );
-#ifdef _DEBUG
-        ImGui::Separator();
-        ImGui::DragFloat( "Camera Yaw", &cameraYaw, 0.01f );
-        ImGui::DragFloat( "Camera Pitch", &cameraPitch, 0.01f );
-        ImGui::DragFloat3( "Camera Target", (float *) &gCameraTarget );
-        ImGui::DragFloat( "Light Yaw", &lightYaw, 0.01f );
-        ImGui::DragFloat( "Light Pitch", &lightPitch, 0.01f );
-#endif
-        ImGui::EndMenu();
-      }
-      if ( ImGui::BeginMenu( "Shaders" ) )
-      {
-        for ( int i = 0; i< options.get<jsonxx::Array>( "shaders" ).size(); i++ )
-        {
-          const jsonxx::Object & shaderConfig = options.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( i );
-          const std::string & name = options.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( i ).get<jsonxx::String>( "name" );
-
-          bool selected = &shaderConfig == gCurrentShaderConfig;
-          if ( ImGui::MenuItem( name.c_str(), NULL, &selected ) )
+          if ( ImGui::MenuItem( "Open model..." ) )
           {
-            LoadShaderConfig( &shaderConfig );
+            openFileDialog = true;
           }
-          gModel.RebindVertexArray( gCurrentShader );
-        }
-        if ( gCurrentShaderConfig && gCurrentShaderConfig->get<jsonxx::Boolean>("showSkybox") )
-        {
           ImGui::Separator();
-          for ( int i = 0; i < options.get<jsonxx::Array>( "skyImages" ).size(); i++ )
+          if ( ImGui::MenuItem( "Exit" ) )
           {
-            const auto & images = options.get<jsonxx::Array>( "skyImages" ).get<jsonxx::Object>( i );
-            const std::string & filename = images.get<jsonxx::String>( "reflection" );
+            appWantsToQuit = true;
+          }
+          ImGui::EndMenu();
+        }
+        if ( ImGui::BeginMenu( "Model" ) )
+        {
+          ImGui::MenuItem( "Show model info", NULL, &showModelInfo );
+          ImGui::Separator();
 
-            bool selected = ( gSkyImages.reflection && gSkyImages.reflection->mFilename == filename );
-            if ( ImGui::MenuItem( filename.c_str(), NULL, &selected ) )
+          bool xyzSpace = !xzySpace;
+          if ( ImGui::MenuItem( "XYZ space", NULL, &xyzSpace ) )
+          {
+            xzySpace = !xzySpace;
+          }
+          ImGui::MenuItem( "XZY space", NULL, &xzySpace );
+          ImGui::EndMenu();
+        }
+        if ( ImGui::BeginMenu( "View" ) )
+        {
+          ImGui::MenuItem( "Enable idle camera", NULL, &automaticCamera );
+          if ( ImGui::MenuItem( "Re-center camera" ) )
+          {
+            gCameraTarget = ( gModel.mAABBMin + gModel.mAABBMax ) / 2.0f;
+          }
+          ImGui::Separator();
+          ImGui::ColorEdit4( "Background", (float *) &clearColor, ImGuiColorEditFlags_AlphaPreviewHalf );
+          ImGui::Separator();
+          ImGui::DragFloat( "Sky blur", &skysphereBlur, 0.1f, 0.0f, 9.0f );
+          ImGui::DragFloat( "Sky opacity", &skysphereOpacity, 0.02f, 0.0f, 1.0f );
+#ifdef _DEBUG
+          ImGui::Separator();
+          ImGui::DragFloat( "Camera Yaw", &cameraYaw, 0.01f );
+          ImGui::DragFloat( "Camera Pitch", &cameraPitch, 0.01f );
+          ImGui::DragFloat3( "Camera Target", (float *) &gCameraTarget );
+          ImGui::DragFloat( "Light Yaw", &lightYaw, 0.01f );
+          ImGui::DragFloat( "Light Pitch", &lightPitch, 0.01f );
+#endif
+          ImGui::EndMenu();
+        }
+        if ( ImGui::BeginMenu( "Shaders" ) )
+        {
+          for ( int i = 0; i < options.get<jsonxx::Array>( "shaders" ).size(); i++ )
+          {
+            const jsonxx::Object & shaderConfig = options.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( i );
+            const std::string & name = options.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( i ).get<jsonxx::String>( "name" );
+
+            bool selected = &shaderConfig == gCurrentShaderConfig;
+            if ( ImGui::MenuItem( name.c_str(), NULL, &selected ) )
             {
-              loadSkyImages(
-                images.get<jsonxx::String>( "reflection" ).c_str(),
-                images.has<jsonxx::String>( "env" ) ? images.get<jsonxx::String>( "env" ).c_str() : NULL );
+              LoadShaderConfig( &shaderConfig );
+            }
+            gModel.RebindVertexArray( gCurrentShader );
+          }
+          if ( gCurrentShaderConfig && gCurrentShaderConfig->get<jsonxx::Boolean>( "showSkybox" ) )
+          {
+            ImGui::Separator();
+            for ( int i = 0; i < options.get<jsonxx::Array>( "skyImages" ).size(); i++ )
+            {
+              const auto & images = options.get<jsonxx::Array>( "skyImages" ).get<jsonxx::Object>( i );
+              const std::string & filename = images.get<jsonxx::String>( "reflection" );
+
+              bool selected = ( gSkyImages.reflection && gSkyImages.reflection->mFilename == filename );
+              if ( ImGui::MenuItem( filename.c_str(), NULL, &selected ) )
+              {
+                loadSkyImages(
+                  images.get<jsonxx::String>( "reflection" ).c_str(),
+                  images.has<jsonxx::String>( "env" ) ? images.get<jsonxx::String>( "env" ).c_str() : NULL );
+              }
             }
           }
+          ImGui::EndMenu();
         }
-        ImGui::EndMenu();
-      }
 
-      ImGui::EndMainMenuBar();
+        ImGui::EndMainMenuBar();
+      }
     }
 
     if ( openFileDialog )
