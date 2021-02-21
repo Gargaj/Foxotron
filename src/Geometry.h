@@ -76,4 +76,5 @@ public:
   glm::mat4x4 * mMatrices;
   glm::vec3 mAABBMin;
   glm::vec3 mAABBMax;
+  glm::vec4 mGlobalAmbient;
 };

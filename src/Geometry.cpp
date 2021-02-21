@@ -408,6 +408,21 @@ bool Geometry::LoadMesh( const char * _path )
     mMaterials.insert( { i, material } );
   }
 
+  mGlobalAmbient = glm::vec4( 0.3f );
+  for ( unsigned int i = 0; i < scene->mNumLights; i++ )
+  {
+    switch ( scene->mLights[ i ]->mType )
+    {
+      case aiLightSource_AMBIENT:
+        {
+          memcpy( &mGlobalAmbient, &scene->mLights[ i ]->mColorAmbient.r, sizeof( float ) * 4 );
+        } break;
+      default:
+        {
+          // todo
+        } break;
+    }
+  }
 
   return true;
 }
@@ -474,6 +489,7 @@ void Geometry::Render( const glm::mat4x4 & _worldRootMatrix, Renderer::Shader * 
 {
   Renderer::SetShader( _shader );
 
+  _shader->SetConstant( "global_ambient", mGlobalAmbient );
   for ( std::map<int, Geometry::Node>::iterator it = mNodes.begin(); it != mNodes.end(); it++ )
   {
     const Geometry::Node & node = it->second;

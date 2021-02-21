@@ -20,6 +20,7 @@ in vec2 out_texcoord;
 in vec3 out_worldpos;
 in vec3 out_to_camera;
 
+
 uniform float specular_shininess;
 
 uniform float skysphere_rotation;
@@ -28,6 +29,8 @@ uniform float exposure;
 
 uniform vec3 camera_position;
 uniform Light lights[3];
+
+uniform vec4 global_ambient;
 
 uniform ColorMap map_albedo;
 uniform ColorMap map_diffuse;
@@ -74,7 +77,7 @@ void main(void)
 
   normal = normalize( normal );
 
-  vec3 color = ambient;
+  vec3 color = ambient * global_ambient.rgb;
   for ( int i = 0; i < lights.length(); i++ )
   {
     float ndotl = clamp( dot( normal, -normalize( lights[ i ].direction ) ), 0.0, 1.0 );
