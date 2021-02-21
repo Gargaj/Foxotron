@@ -172,6 +172,24 @@ file(GLOB FXTRN_PROJECT_SRCS
   ${CMAKE_SOURCE_DIR}/src/*.cpp
   ${CMAKE_SOURCE_DIR}/src/*.h
 )
+
+if (WIN32)
+  set(FXTRN_PROJECT_SRCS
+    ${FXTRN_PROJECT_SRCS}
+    ${CMAKE_SOURCE_DIR}/src/platform_w32/SetupDialog.cpp
+  )
+  set(FXTRN_RESOURCES_DATA
+    ${CMAKE_SOURCE_DIR}/data/windows/SetupDialog.rc
+  )
+  source_group("Data" FILES ${FXTRN_RESOURCES_DATA})
+  set(FXTRN_PROJECT_INCLUDES ${CMAKE_SOURCE_DIR}/data/windows ${FXTRN_PROJECT_INCLUDES})
+else ()
+  set(FXTRN_PROJECT_SRCS
+    ${FXTRN_PROJECT_SRCS}
+    ${CMAKE_SOURCE_DIR}/src/platform_common/SetupDialog.cpp
+  )
+endif ()
+
 source_group("Foxotron" FILES ${FXTRN_PROJECT_SRCS})
 
 set(FXTRN_PROJECT_SRCS ${FXTRN_PROJECT_SRCS} ${FXTRN_PLATFORM_SRCS} ${FXTRN_RESOURCES_DATA} ${FXTRN_CAPTURE_SRCS})

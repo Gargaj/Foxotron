@@ -2,6 +2,7 @@
 #include <algorithm>
 
 #include "Geometry.h"
+#include "SetupDialog.h"
 
 #define IMGUI_IMPL_OPENGL_LOADER_GLEW
 #include <imgui.h>
@@ -222,10 +223,18 @@ int main( int argc, const char * argv[] )
   //////////////////////////////////////////////////////////////////////////
   // Init renderer
   RENDERER_SETTINGS settings;
-  settings.bVsync = false;
-  settings.nWidth = 1280;
-  settings.nHeight = 720;
-  settings.windowMode = RENDERER_WINDOWMODE_WINDOWED;
+  settings.mVsync = false;
+  settings.mWidth = 1280;
+  settings.mHeight = 720;
+  settings.mWindowMode = RENDERER_WINDOWMODE_WINDOWED;
+  settings.mMultisampling = false;
+#ifndef _DEBUG
+  if ( !SetupDialog::Open( &settings ) )
+  {
+    return -14;
+  }
+#endif
+
   if ( !Renderer::Open( &settings ) )
   {
     printf( "Renderer::Open failed\n" );
@@ -563,7 +572,7 @@ int main( int argc, const char * argv[] )
     if ( gCurrentShaderConfig->get<jsonxx::Boolean>( "showSkybox" ) )
     {
       float verticalFovInRadian = 0.5f;
-      projectionMatrix = glm::perspective( verticalFovInRadian, settings.nWidth / (float) settings.nHeight, 0.001f, 2.0f );
+      projectionMatrix = glm::perspective( verticalFovInRadian, settings.mWidth / (float) settings.mHeight, 0.001f, 2.0f );
       skysphereShader->SetConstant( "mat_projection", projectionMatrix );
 
       viewMatrix = glm::lookAtRH( cameraPosition * 0.15f, glm::vec3( 0.0f, 0.0f, 0.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
@@ -589,7 +598,7 @@ int main( int argc, const char * argv[] )
     // Mesh render
 
     float verticalFovInRadian = 0.5f;
-    projectionMatrix = glm::perspective( verticalFovInRadian, settings.nWidth / (float) settings.nHeight, gCameraDistance / 1000.0f, gCameraDistance * 2.0f );
+    projectionMatrix = glm::perspective( verticalFovInRadian, settings.mWidth / (float) settings.mHeight, gCameraDistance / 1000.0f, gCameraDistance * 2.0f );
     gCurrentShader->SetConstant( "mat_projection", projectionMatrix );
 
     cameraPosition *= gCameraDistance;

@@ -44,7 +44,7 @@ void mouse_button_callback( GLFWwindow * window, int button, int action, int mod
 void scroll_callback( GLFWwindow * window, double xoffset, double yoffset );
 void drop_callback( GLFWwindow * window, int path_count, const char * paths[] );
 
-bool Open( RENDERER_SETTINGS * settings )
+bool Open( RENDERER_SETTINGS * _settings )
 {
   glfwSetErrorCallback( error_callback );
 
@@ -59,8 +59,8 @@ bool Open( RENDERER_SETTINGS * settings )
   }
   printf( "[GLFW] Version String: %s\n", glfwGetVersionString() );
 
-  nWidth = settings->nWidth;
-  nHeight = settings->nHeight;
+  nWidth = _settings->mWidth;
+  nHeight = _settings->mHeight;
 
   glfwWindowHint( GLFW_RED_BITS, 8 );
   glfwWindowHint( GLFW_GREEN_BITS, 8 );
@@ -70,7 +70,10 @@ bool Open( RENDERER_SETTINGS * settings )
   glfwWindowHint( GLFW_STENCIL_BITS, 8 );
 
   glfwWindowHint( GLFW_DOUBLEBUFFER, GLFW_TRUE );
-  glfwWindowHint( GLFW_SAMPLES, 4 );
+  if ( _settings->mMultisampling )
+  {
+    glfwWindowHint( GLFW_SAMPLES, 4 );
+  }
 
   glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 4 );
   glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 1 );
@@ -88,7 +91,7 @@ bool Open( RENDERER_SETTINGS * settings )
   // Prevent fullscreen window minimize on focus loss
   glfwWindowHint( GLFW_AUTO_ICONIFY, GL_FALSE );
 
-  GLFWmonitor * monitor = settings->windowMode == RENDERER_WINDOWMODE_FULLSCREEN ? glfwGetPrimaryMonitor() : NULL;
+  GLFWmonitor * monitor = _settings->mWindowMode == RENDERER_WINDOWMODE_FULLSCREEN ? glfwGetPrimaryMonitor() : NULL;
 
   mWindow = glfwCreateWindow( nWidth, nHeight, "FOXOTRON v0.0.1", monitor, NULL );
   if ( !mWindow )
@@ -119,7 +122,7 @@ bool Open( RENDERER_SETTINGS * settings )
   glfwSwapInterval( 1 );
 
 #ifdef _WIN32
-  if ( settings->bVsync )
+  if ( _settings->mVsync )
   {
     wglSwapIntervalEXT( 1 );
   }
@@ -132,8 +135,8 @@ bool Open( RENDERER_SETTINGS * settings )
   int fbWidth = 1;
   int fbHeight = 1;
   glfwGetFramebufferSize( mWindow, &fbWidth, &fbHeight );
-  nWidth = settings->nWidth = fbWidth;
-  nHeight = settings->nHeight = fbHeight;
+  nWidth = _settings->mWidth = fbWidth;
+  nHeight = _settings->mHeight = fbHeight;
   printf( "[GLFW] Obtained framebuffer size: %d x %d\n", fbWidth, fbHeight );
 
   glViewport( 0, 0, nWidth, nHeight );

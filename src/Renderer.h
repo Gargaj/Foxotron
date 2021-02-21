@@ -1,6 +1,7 @@
 #define GLFW_INCLUDE_NONE
 #include "GLFW/glfw3.h"
 
+#include <string>
 #include <glm.hpp>
 
 typedef enum
@@ -12,10 +13,11 @@ typedef enum
 
 typedef struct
 {
-  int nWidth;
-  int nHeight;
-  RENDERER_WINDOWMODE windowMode;
-  bool bVsync;
+  int mWidth;
+  int mHeight;
+  RENDERER_WINDOWMODE mWindowMode;
+  bool mVsync;
+  bool mMultisampling;
 } RENDERER_SETTINGS;
 
 namespace Renderer
