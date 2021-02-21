@@ -12,6 +12,11 @@ Check [the wiki](https://github.com/Gargaj/Foxotron/wiki) for information on how
 * F: Refocus camera on mesh
 * Alt-F4: Enter hyberwormtunnel
 
+### Mouse operations
+* Left click & drag: Rotate camera
+* Right click & drag: Rotate light / skybox
+* Middle click & drag: Pan camera
+
 ## Requirements
 OpenGL 4.1 is required.
 
