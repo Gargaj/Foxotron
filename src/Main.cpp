@@ -272,6 +272,7 @@ int main( int argc, const char * argv[] )
   bool automaticCamera = false;
   glm::mat4x4 viewMatrix;
   glm::mat4x4 projectionMatrix;
+  bool rotatingCamera = false;
   bool movingCamera = false;
   bool movingLight = false;
   float cameraYaw = 0.0f;
@@ -352,6 +353,11 @@ int main( int argc, const char * argv[] )
       if ( ImGui::BeginMenu( "View" ) )
       {
         ImGui::MenuItem( "Enable idle camera", NULL, &automaticCamera );
+        if ( ImGui::MenuItem( "Re-center camera" ) )
+        {
+          gCameraTarget = ( gModel.mAABBMin + gModel.mAABBMax ) / 2.0f;
+        }
+        ImGui::Separator();
         ImGui::ColorEdit4( "Background", (float *) &clearColor, ImGuiColorEditFlags_AlphaPreviewHalf );
         ImGui::Separator();
         ImGui::DragFloat( "Sky blur", &skysphereBlur, 0.1f, 0.0f, 9.0f );
@@ -361,6 +367,8 @@ int main( int argc, const char * argv[] )
         ImGui::DragFloat( "Camera Yaw", &cameraYaw, 0.01f );
         ImGui::DragFloat( "Camera Pitch", &cameraPitch, 0.01f );
         ImGui::DragFloat3( "Camera Target", (float *) &gCameraTarget );
+        ImGui::DragFloat( "Light Yaw", &lightYaw, 0.01f );
+        ImGui::DragFloat( "Light Pitch", &lightPitch, 0.01f );
 #endif
         ImGui::EndMenu();
       }
@@ -492,8 +500,9 @@ int main( int argc, const char * argv[] )
         {
           case Renderer::MOUSEEVENTTYPE_MOVE:
             {
+              const float panSpeed = 0.005f;
               const float rotationSpeed = 130.0f;
-              if ( movingCamera )
+              if ( rotatingCamera )
               {
                 cameraYaw -= ( mouseEvent.x - mouseClickPosX ) / rotationSpeed;
                 cameraPitch += ( mouseEvent.y - mouseClickPosY ) / rotationSpeed;
@@ -511,6 +520,23 @@ int main( int argc, const char * argv[] )
                 lightPitch = std::min( lightPitch, 1.5f );
                 lightPitch = std::max( lightPitch, -1.5f );
               }
+              if ( movingCamera )
+              {
+                float moveX = ( mouseEvent.x - mouseClickPosX ) / panSpeed;
+                float moveY = ( mouseEvent.y - mouseClickPosY ) / panSpeed;
+
+                glm::vec3 newBaseZ( 0.0f, 0.0f, -1.0f );
+                newBaseZ = glm::rotateX( newBaseZ, cameraPitch );
+                newBaseZ = glm::rotateY( newBaseZ, cameraYaw );
+                newBaseZ = -newBaseZ;
+
+                glm::vec3 up( 0.0f, 1.0f, 0.0f );
+                glm::vec3 newBaseX = glm::cross( up, newBaseZ );
+                glm::vec3 newBaseY = glm::cross( newBaseZ, newBaseX );
+
+                gCameraTarget += newBaseX * ( moveX / gCameraDistance );
+                gCameraTarget += newBaseY * ( moveY / gCameraDistance );
+              }
               mouseClickPosX = mouseEvent.x;
               mouseClickPosY = mouseEvent.y;
             }
@@ -519,12 +545,16 @@ int main( int argc, const char * argv[] )
             {
               if ( mouseEvent.button == Renderer::MOUSEBUTTON_LEFT )
               {
-                movingCamera = true;
+                rotatingCamera = true;
                 automaticCamera = false;
               }
               else if ( mouseEvent.button == Renderer::MOUSEBUTTON_RIGHT )
               {
                 movingLight = true;
+              }
+              else if ( mouseEvent.button == Renderer::MOUSEBUTTON_MIDDLE )
+              {
+                movingCamera = true;
               }
               mouseClickPosX = mouseEvent.x;
               mouseClickPosY = mouseEvent.y;
@@ -534,11 +564,15 @@ int main( int argc, const char * argv[] )
             {
               if ( mouseEvent.button == Renderer::MOUSEBUTTON_LEFT )
               {
-                movingCamera = false;
+                rotatingCamera = false;
               }
               else if ( mouseEvent.button == Renderer::MOUSEBUTTON_RIGHT )
               {
                 movingLight = false;
+              }
+              else if ( mouseEvent.button == Renderer::MOUSEBUTTON_MIDDLE )
+              {
+                movingCamera = false;
               }
             }
             break;
