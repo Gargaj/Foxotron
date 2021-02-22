@@ -8,6 +8,10 @@ const bool use_wraparound_specular = true;
 const bool use_specular_ao_attenuation = true;
 // Increases roughness if normal map has variation and was minified.
 const bool use_normal_variation_to_roughness = true;
+// Shows all ColorMaps as horizontal bars
+const bool use_map_debugging = false;
+// Splits the screen in two and shows image-based specular (left) and diffuse (right) shading.
+const bool use_ambient_debugging = false;
 
 struct Light
 {
@@ -101,15 +105,12 @@ float geometry_smith( vec3 N, vec3 V, vec3 L, float roughness )
 vec2 sphere_to_polar( vec3 normal )
 {
   normal = normalize( normal );
-
-  float ang = atan( normal.z, normal.x );
-
-  return vec2( ang / PI / 2.0 + 0.5 + skysphere_rotation, 1. - acos( normal.y ) / PI );
+  return vec2( atan(normal.z, normal.x) / PI / 2.0 + 0.5 + skysphere_rotation, acos(normal.y) / PI );
 }
 
 vec3 sample_sky( vec3 normal )
 {
-  vec2 polar = sphere_to_polar( normal * vec3( 1., -1., 1. ) );
+  vec2 polar = sphere_to_polar( normal );
   return texture( tex_skysphere, polar ).rgb * exposure;
 }
 
@@ -117,13 +118,11 @@ vec3 sample_sky( vec3 normal )
 // returns a normalized sum.
 vec3 sample_irradiance_slow( vec3 normal, vec3 vertex_tangent )
 {
-  float delta = 0.1;
+  float delta = 0.10;
 
-  // Construct the tangent space using the perturbed normal and the original vertex tangent.
-  // Maybe there's a better way to do this?
-
-  vec3 right = cross( normal, vertex_tangent );
-  vec3 up = vertex_tangent;
+  vec3 up = abs( normal.y ) < 0.999 ? vec3( 0., 1., 0. ) : vec3( 0., 0., 1. );
+  vec3 tangent_x = normalize( cross( up, normal ) );
+  vec3 tangent_y = cross( normal, tangent_x );
 
   int numIrradianceSamples = 0;
 
@@ -137,7 +136,8 @@ vec3 sample_irradiance_slow( vec3 normal, vec3 vertex_tangent )
           sin( theta ) * cos( phi ),
           sin( theta ) * sin( phi ),
           cos( theta ) );
-      vec3 world_space = tangent_space.x * right + tangent_space.y + up + tangent_space.z * normal;
+
+      vec3 world_space = tangent_space.x * tangent_x + tangent_space.y + tangent_y + tangent_space.z * normal;
 
       vec3 color = sample_sky( world_space );
       irradiance += color * cos( theta ) * sin( theta );
@@ -154,18 +154,16 @@ vec3 sample_irradiance_fast( vec3 normal, vec3 vertex_tangent )
   // Sample the irradiance map if it exists, otherwise fall back to blurred reflection map.
   if ( has_tex_skyenv )
   {
-    // TODO: Is this y-axis flip really necessary?
-    vec2 polar = sphere_to_polar( normal * vec3( 1., -1., 1. ) );
+    vec2 polar = sphere_to_polar( normal );
     // HACK: Sample a smaller mip here to avoid high frequency color variations on detailed normal
     //       mapped areas.
-    return textureLod( tex_skyenv, polar, 2 ).rgb * exposure;
+    float miplevel = 5.5; // tweaked for a 360x180 irradiance texture
+    return textureLod( tex_skyenv, polar, miplevel ).rgb * exposure;
   }
   else
   {
-    int level = 8;
-    vec2 polar = sphere_to_polar( normal * vec3( 1., -1., 1. ) );
-    // TODO how to properly normalize a single mipmap tap to irradiance?
-    return textureLod( tex_skysphere, polar, level ).rgb * exposure;
+    vec2 polar = sphere_to_polar( normal );
+    return textureLod( tex_skysphere, polar, 0.80 * skysphere_mip_count ).rgb * exposure;
   }
 }
 
@@ -187,13 +185,12 @@ vec3 specular_ibl( vec3 V, vec3 N, float roughness, vec3 fresnel )
 
   vec3 R = 2. * dot( V, N ) * N - V;
 
-  // TODO Again, why the sign flip for Y?
-  vec2 polar = sphere_to_polar( R * vec3( 1., -1., 1. ) );
+  vec2 polar = sphere_to_polar( R );
 
   // Map roughness from range [0, 1] into a mip LOD [0, skysphere_mip_count].
-  // The magic numbers 0.7 and 0.25 were chosen empirically.
+  // The magic numbers were chosen empirically.
 
-  float mip = 0.7 * skysphere_mip_count * pow(roughness, 0.25);
+  float mip = 0.9 * skysphere_mip_count * pow(roughness, 0.25);
 
   vec3 prefiltered = textureLod( tex_skysphere, polar, mip ).rgb * exposure;
 
@@ -206,7 +203,7 @@ vec3 specular_ibl( vec3 V, vec3 N, float roughness, vec3 fresnel )
     NdotV = NdotV * 0.9 + 0.1;
   }
 
-  NdotV = min(0.99, max(0., NdotV));
+  NdotV = min(0.99, max(0.01, NdotV));
 
   // A precomputed lookup table contains a scale and a bias term for specular intensity (called "fresnel" here).
   // See equation (8) in Karis' course notes mentioned above.
@@ -253,6 +250,20 @@ void main(void)
   }
 
   normal = normalize( normal );
+
+  if ( use_map_debugging )
+  {
+    vec3 c = vec3(1., 0., 0.);
+    float y = gl_FragCoord.y / 1170.;
+    if ( y < 0.6 ) c = vec3(.5) + .5*out_normal;
+    if ( y < 0.5 ) c = vec3(.5) + .5*normalmap;
+    if ( y < 0.4 ) c = vec3(ao);
+    if ( y < 0.3 ) c = vec3(metallic);
+    if ( y < 0.2 ) c = vec3(roughness);
+    if ( y < 0.1 ) c = baseColor;
+    frag_color = vec4(c, 1.);
+    return;
+  }
 
   if (use_normal_variation_to_roughness)
   {
@@ -303,15 +314,17 @@ void main(void)
   }
 
   vec3 ambient = sample_colormap( map_ambient, out_texcoord ).xyz;
+  vec3 diffuse_ambient;
+  vec3 specular_ambient;
 
-  if (use_ibl)
+  if ( use_ibl )
   {
     // Image based lighting.
     // Based on https://learnopengl.com/PBR/IBL/Diffuse-irradiance
 
     vec3 irradiance = vec3(0.);
 
-    if (use_bruteforce_irradiance)
+    if ( use_bruteforce_irradiance )
     {
       irradiance = sample_irradiance_slow( normal, out_tangent );
     }
@@ -336,25 +349,34 @@ void main(void)
     kD *= 1.0 - metallic;
 
     // Modulate the incoming lighting with the diffuse color: some wavelengths get absorbed.
-    vec3 diffuse = irradiance * baseColor;
+    diffuse_ambient = irradiance * baseColor;
 
     // Ambient light also has a specular part.
-    vec3 specular = specular_ibl( V, normal, roughness, F );
+    specular_ambient = specular_ibl( V, normal, roughness, F );
 
     // Ambient occlusion tells us the fraction of sky light that reaches this point.
 
     if (use_specular_ao_attenuation)
     {
-      ambient = ao * (kD * diffuse + specular);
+      ambient = ao * (kD * diffuse_ambient + specular_ambient);
     }
     else
     {
-      // We don't attenuate specular ambient here with AO which might cause flickering in dark cavities.
-      ambient = ao * (kD * diffuse) + specular;
+      // We don't attenuate specular_ambient ambient here with AO which might cause flickering in dark cavities.
+      ambient = ao * (kD * diffuse_ambient) + specular_ambient;
     }
   }
 
   vec3 color = ambient + Lo;
+
+  if ( use_ambient_debugging )
+  {
+    float x = gl_FragCoord.x / 1280.;
+    if ( x > 0.5 )
+        color = diffuse_ambient;
+    else
+        color = specular_ambient;
+  }
 
   // Tonemap and apply gamma correction.
   color = color / ( vec3(1.) + color );
