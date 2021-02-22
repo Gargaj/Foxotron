@@ -8,6 +8,10 @@ const bool use_wraparound_specular = true;
 const bool use_specular_ao_attenuation = true;
 // Increases roughness if normal map has variation and was minified.
 const bool use_normal_variation_to_roughness = true;
+// Shows all ColorMaps as horizontal bars
+const bool use_map_debugging = false;
+// Splits the screen in two and shows image-based specular (left) and diffuse (right) shading.
+const bool use_ambient_debugging = false;
 
 struct Light
 {
@@ -254,6 +258,20 @@ void main(void)
 
   normal = normalize( normal );
 
+  if ( use_map_debugging )
+  {
+    vec3 c = vec3(1., 0., 0.);
+    float y = gl_FragCoord.y / 1170.;
+    if ( y < 0.6 ) c = vec3(.5) + .5*out_normal;
+    if ( y < 0.5 ) c = vec3(.5) + .5*normalmap;
+    if ( y < 0.4 ) c = vec3(ao);
+    if ( y < 0.3 ) c = vec3(metallic);
+    if ( y < 0.2 ) c = vec3(roughness);
+    if ( y < 0.1 ) c = baseColor;
+    frag_color = vec4(c, 1.);
+    return;
+  }
+
   if (use_normal_variation_to_roughness)
   {
     // Try to reduce specular aliasing by increasing roughness when minified normal maps have high variation.
@@ -303,15 +321,17 @@ void main(void)
   }
 
   vec3 ambient = sample_colormap( map_ambient, out_texcoord ).xyz;
+  vec3 diffuse_ambient;
+  vec3 specular_ambient;
 
-  if (use_ibl)
+  if ( use_ibl )
   {
     // Image based lighting.
     // Based on https://learnopengl.com/PBR/IBL/Diffuse-irradiance
 
     vec3 irradiance = vec3(0.);
 
-    if (use_bruteforce_irradiance)
+    if ( use_bruteforce_irradiance )
     {
       irradiance = sample_irradiance_slow( normal, out_tangent );
     }
@@ -336,25 +356,34 @@ void main(void)
     kD *= 1.0 - metallic;
 
     // Modulate the incoming lighting with the diffuse color: some wavelengths get absorbed.
-    vec3 diffuse = irradiance * baseColor;
+    diffuse_ambient = irradiance * baseColor;
 
     // Ambient light also has a specular part.
-    vec3 specular = specular_ibl( V, normal, roughness, F );
+    specular_ambient = specular_ibl( V, normal, roughness, F );
 
     // Ambient occlusion tells us the fraction of sky light that reaches this point.
 
     if (use_specular_ao_attenuation)
     {
-      ambient = ao * (kD * diffuse + specular);
+      ambient = ao * (kD * diffuse_ambient + specular_ambient);
     }
     else
     {
-      // We don't attenuate specular ambient here with AO which might cause flickering in dark cavities.
-      ambient = ao * (kD * diffuse) + specular;
+      // We don't attenuate specular_ambient ambient here with AO which might cause flickering in dark cavities.
+      ambient = ao * (kD * diffuse_ambient) + specular_ambient;
     }
   }
 
   vec3 color = ambient + Lo;
+
+  if ( use_ambient_debugging )
+  {
+    float x = gl_FragCoord.x / 1280.;
+    if ( x > 0.5 )
+        color = diffuse_ambient;
+    else
+        color = specular_ambient;
+  }
 
   // Tonemap and apply gamma correction.
   color = color / ( vec3(1.) + color );
