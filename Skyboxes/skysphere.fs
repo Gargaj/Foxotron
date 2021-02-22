@@ -50,20 +50,13 @@ vec2 sphere_to_polar( vec3 normal )
 void main(void)
 {
   // vec3 sky_color = textureLod( tex_skysphere, sphere_to_polar( normalize( out_worldpos ) ), skysphere_blur ).rgb;
-  vec3 sky_color = background_color.rgb;
 
-  if ( has_tex_skyenv )
-  {
-      sky_color = textureLod( tex_skyenv, sphere_to_polar( normalize( out_worldpos ) ), skysphere_blur ).rgb;
-  }
-  else
-  {
-      sky_color = textureLod( tex_skysphere, sphere_to_polar( normalize( out_worldpos ) ), skysphere_blur ).rgb;
-  }
+  vec3 sky_env = textureLod( tex_skyenv, sphere_to_polar( normalize( out_worldpos ) ), skysphere_blur ).rgb;
+  vec3 sky_color = textureLod( tex_skysphere, sphere_to_polar( normalize( out_worldpos ) ), skysphere_blur ).rgb;
 
-  sky_color = mix( background_color.rgb, sky_color, skysphere_opacity );
-  sky_color *= exposure;
-  vec3 color = sky_color / (vec3(1.) + sky_color);
+  vec3 color = mix( background_color.rgb, mix( sky_color, sky_env, skysphere_blur / 8.0 ) , skysphere_opacity );
+  color *= exposure;
+  color = color / (vec3(1.) + color);
   color = pow( color, vec3( 1. / 2.2 ));
   float dither = random( uvec3( floatBitsToUint( gl_FragCoord.xy ), frame_count ) );
   color += vec3( (-1.5/256.) + (3./256.) * dither );
