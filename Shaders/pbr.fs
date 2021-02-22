@@ -36,6 +36,7 @@ in vec3 out_to_camera;
 uniform float skysphere_rotation;
 uniform float skysphere_mip_count;
 uniform float exposure;
+uniform uint frame_count;
 
 uniform vec3 camera_position;
 uniform Light lights[3];
@@ -60,11 +61,35 @@ out vec4 frag_color;
 
 const float PI = 3.1415926536;
 
-vec4 sample_colormap( ColorMap map, vec2 uv ) 
+// MurMurHash 3 finalizer. Implementation is in public domain.
+uint hash( uint h )
 {
-  return map.has_tex ? texture( map.tex, uv ) : map.color; 
+    h ^= h >> 16;
+    h *= 0x85ebca6b;
+    h ^= h >> 13;
+    h *= 0xc2b2ae35;
+    h ^= h >> 16;
+    return h;
 }
- 
+
+// Random function using the idea of StackOverflow user "Spatial" https://stackoverflow.com/a/17479300
+// Creates random 23 bits and puts them into the fraction bits of an 32-bit float.
+float random( uvec3 h )
+{
+    uint m = hash(h.x ^ hash( h.y ) ^ hash( h.z ));
+    return uintBitsToFloat( ( m & 0x007FFFFFu ) | 0x3f800000u ) - 1.;
+}
+
+float random( vec3 v )
+{
+    return random(floatBitsToUint( v ));
+}
+
+vec4 sample_colormap( ColorMap map, vec2 uv )
+{
+  return map.has_tex ? texture( map.tex, uv ) : map.color;
+}
+
 vec3 fresnel_schlick( vec3 H, vec3 V, vec3 F0 )
 {
   float cosTheta = clamp( dot( H, V ), 0., 1. );
@@ -228,7 +253,7 @@ void main(void)
 
   roughness = sample_colormap( map_roughness, out_texcoord ).x;
   metallic = sample_colormap( map_metallic, out_texcoord ).x;
-  
+
   if ( map_ao.has_tex )
     ao = sample_colormap( map_ao, out_texcoord ).x;
   else if ( map_ambient.has_tex )
@@ -378,7 +403,11 @@ void main(void)
         color = specular_ambient;
   }
 
-  // Tonemap and apply gamma correction.
+
+  // Tonemap, apply gamma correction and dither with noise.
   color = color / ( vec3(1.) + color );
-  frag_color = vec4( pow( color, vec3(1. / 2.2) ), 1.0 );
+  color = pow( color, vec3(1. / 2.2) );
+  float dither = random( uvec3( floatBitsToUint( gl_FragCoord.xy ), frame_count ) );
+  color += vec3( (-1.0/256.) + (2./256.) * dither );
+  frag_color = vec4( color, 1.0 );
 }
