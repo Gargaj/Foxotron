@@ -210,7 +210,7 @@ vec3 specular_ibl( vec3 V, vec3 N, float roughness, vec3 fresnel )
     NdotV = NdotV * 0.9 + 0.1;
   }
 
-  NdotV = min(0.99, max(0., NdotV));
+  NdotV = min(0.99, max(0.01, NdotV));
 
   // A precomputed lookup table contains a scale and a bias term for specular intensity (called "fresnel" here).
   // See equation (8) in Karis' course notes mentioned above.
