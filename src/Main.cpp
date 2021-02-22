@@ -275,6 +275,7 @@ int main( int argc, const char * argv[] )
   // Mainloop
   bool appWantsToQuit = false;
   bool automaticCamera = false;
+  uint32_t frameCount = 0;
   glm::mat4x4 viewMatrix;
   glm::mat4x4 projectionMatrix;
   bool rotatingCamera = false;
@@ -289,7 +290,7 @@ int main( int argc, const char * argv[] )
   glm::vec4 clearColor( 0.5f, 0.5f, 0.5f, 1.0f );
   std::string supportedExtensions = Geometry::GetSupportedExtensions();
   float skysphereOpacity = 1.0f;
-  float skysphereBlur = 0.75f;
+  float skysphereBlur = 0.0f;
   float exposure = 1.0f;
   bool showImGui = true;
   bool edgedFaces = false;
@@ -640,9 +641,16 @@ int main( int argc, const char * argv[] )
       skysphereShader->SetConstant( "mat_view", viewMatrix );
 
       skysphereShader->SetConstant( "has_tex_skysphere", gSkyImages.reflection != NULL );
+      skysphereShader->SetConstant( "has_tex_skyenv", gSkyImages.env != NULL );
+
       if ( gSkyImages.reflection )
       {
         skysphereShader->SetTexture( "tex_skysphere", gSkyImages.reflection );
+      }
+
+      if ( gSkyImages.env )
+      {
+        skysphereShader->SetTexture( "tex_skyenv", gSkyImages.env );
       }
 
       skysphereShader->SetConstant( "background_color", clearColor );
@@ -650,6 +658,7 @@ int main( int argc, const char * argv[] )
       skysphereShader->SetConstant( "skysphere_opacity", skysphereOpacity );
       skysphereShader->SetConstant( "skysphere_rotation", lightYaw );
       skysphereShader->SetConstant( "exposure", exposure );
+      skysphereShader->SetConstant( "frame_count", frameCount );
 
       skysphere.Render( worldRootXYZ, skysphereShader );
 
@@ -701,6 +710,7 @@ int main( int argc, const char * argv[] )
     }
     gCurrentShader->SetTexture( "tex_brdf_lut", gBrdfLookupTable );
     gCurrentShader->SetConstant( "exposure", exposure );
+    gCurrentShader->SetConstant( "frame_count", frameCount );
 
     //////////////////////////////////////////////////////////////////////////
     // Mesh render
@@ -723,6 +733,7 @@ int main( int argc, const char * argv[] )
     // End frame
     ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
     Renderer::EndFrame();
+    frameCount++;
   }
 
   //////////////////////////////////////////////////////////////////////////

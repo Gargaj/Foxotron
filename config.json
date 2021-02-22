@@ -10,7 +10,7 @@
       "name": "Basic SpecGloss",
       "vertexShader": "Shaders/basic_specgloss.vs",
       "fragmentShader": "Shaders/basic_specgloss.fs",
-      "showSkybox": false
+      "showSkybox": true
     }
   ],
   "skyImages":[

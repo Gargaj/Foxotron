@@ -380,7 +380,7 @@ bool Geometry::LoadMesh( const char * _path )
     material.mColorMapRoughness.mColor = glm::vec4( 1.0f );
     material.mColorMapMetallic.mColor = glm::vec4( 0.0f );
     material.mColorMapAO.mColor = glm::vec4( 1.0f );
-    material.mColorMapAmbient.mColor = glm::vec4( 0.0f );
+    material.mColorMapAmbient.mColor = glm::vec4( 1.0f );
 
     LoadColorMap( scene->mMaterials[ i ], material.mColorMapDiffuse, aiTextureType_DIFFUSE, "diffuse", folder, true );
     if ( !LoadColorMap( scene->mMaterials[ i ], material.mColorMapNormals, aiTextureType_NORMAL_CAMERA, "normals", folder ) )
