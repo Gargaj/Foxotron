@@ -32,6 +32,12 @@ uniform Light lights[3];
 
 uniform vec4 global_ambient;
 
+uniform bool has_tex_skysphere;
+uniform bool has_tex_skyenv;
+
+uniform sampler2D tex_skysphere;
+uniform sampler2D tex_skyenv;
+
 uniform ColorMap map_albedo;
 uniform ColorMap map_diffuse;
 uniform ColorMap map_specular;
@@ -43,11 +49,37 @@ uniform ColorMap map_ambient;
 
 out vec4 frag_color;
 
-vec4 sample_colormap( ColorMap map, vec2 uv) 
+const float PI = 3.1415926536;
+
+vec4 sample_colormap( ColorMap map, vec2 uv)
 {
-  return map.has_tex ? texture( map.tex, uv ) : map.color; 
+  return map.has_tex ? texture( map.tex, uv ) : map.color;
 }
- 
+
+vec2 sphere_to_polar( vec3 normal )
+{
+  normal = normalize( normal );
+  return vec2( atan(normal.z, normal.x) / PI / 2.0 + 0.5 + skysphere_rotation, acos(normal.y) / PI );
+}
+
+vec3 sample_irradiance_fast( vec3 normal )
+{
+  // Sample the irradiance map if it exists, otherwise fall back to blurred reflection map.
+  if ( has_tex_skyenv )
+  {
+    vec2 polar = sphere_to_polar( normal );
+    // HACK: Sample a smaller mip here to avoid high frequency color variations on detailed normal
+    //       mapped areas.
+    float miplevel = 5.5; // tweaked for a 360x180 irradiance texture
+    return textureLod( tex_skyenv, polar, miplevel ).rgb * exposure;
+  }
+  else
+  {
+    vec2 polar = sphere_to_polar( normal );
+    return textureLod( tex_skysphere, polar, 0.80 * skysphere_mip_count ).rgb * exposure;
+  }
+}
+
 float calculate_specular( vec3 normal, vec3 light_direction )
 {
   vec3 V = normalize( out_to_camera );
@@ -77,13 +109,15 @@ void main(void)
 
   normal = normalize( normal );
 
+  vec3 irradiance = sample_irradiance_fast( normal );
+  ambient *= irradiance;
+
   vec3 color = ambient * global_ambient.rgb;
   for ( int i = 0; i < lights.length(); i++ )
   {
     float ndotl = clamp( dot( normal, -normalize( lights[ i ].direction ) ), 0.0, 1.0 );
 
     vec3 specular = specularmap.rgb * calculate_specular( normal, lights[ i ].direction ) * specularmap.a;
-    
     color += (diffusemap + specular) * ndotl * lights[ i ].color;
   }
 
