@@ -44,6 +44,7 @@ struct Shader
   unsigned int mVertexShader;
   unsigned int mFragmentShader;
   void SetConstant( const char * szConstName, bool x );
+  void SetConstant( const char * szConstName, uint32_t x );
   void SetConstant( const char * szConstName, float x );
   void SetConstant( const char * szConstName, float x, float y );
   void SetConstant( const char * szConstName, const glm::vec3 & vector );

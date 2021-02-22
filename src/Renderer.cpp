@@ -70,6 +70,7 @@ bool Open( RENDERER_SETTINGS * _settings )
   glfwWindowHint( GLFW_STENCIL_BITS, 8 );
 
   glfwWindowHint( GLFW_DOUBLEBUFFER, GLFW_TRUE );
+
   if ( _settings->mMultisampling )
   {
     glfwWindowHint( GLFW_SAMPLES, 4 );
@@ -298,6 +299,15 @@ void Shader::SetConstant( const char * szConstName, bool x )
   if ( location != -1 )
   {
     glProgramUniform1i( mProgram, location, x ? 1 : 0 );
+  }
+}
+
+void Shader::SetConstant( const char * szConstName, uint32_t x )
+{
+  GLint location = glGetUniformLocation( mProgram, szConstName );
+  if ( location != -1 )
+  {
+    glProgramUniform1ui( mProgram, location, x );
   }
 }
 
