@@ -56,6 +56,7 @@ uniform ColorMap map_roughness;
 uniform ColorMap map_metallic;
 uniform ColorMap map_ao;
 uniform ColorMap map_ambient;
+uniform ColorMap map_emissive;
 
 out vec4 frag_color;
 
@@ -259,6 +260,8 @@ void main(void)
   else if ( map_ambient.has_tex )
     ao = sample_colormap( map_ambient, out_texcoord ).x;
 
+  vec3 emissive = sample_colormap( map_emissive, out_texcoord ).rgb;
+
   vec3 normalmap = texture( map_normals.tex, out_texcoord ).xyz * vec3(2.0) - vec3(1.0);
   float normalmap_mip = textureQueryLod( map_normals.tex, out_texcoord ).x;
   float normalmap_length = length(normalmap);
@@ -279,9 +282,10 @@ void main(void)
   if ( use_map_debugging )
   {
     vec3 c = vec3(1., 0., 0.);
-    float y = gl_FragCoord.y / 1170.;
-    if ( y < 0.6 ) c = vec3(.5) + .5*out_normal;
-    if ( y < 0.5 ) c = vec3(.5) + .5*normalmap;
+    float y = gl_FragCoord.y / 1000.;
+    if ( y < 0.7 ) c = vec3(.5) + .5*out_normal;
+    if ( y < 0.6 ) c = vec3(.5) + .5*normalmap;
+    if ( y < 0.5 ) c = vec3(emissive);
     if ( y < 0.4 ) c = vec3(ao);
     if ( y < 0.3 ) c = vec3(metallic);
     if ( y < 0.2 ) c = vec3(roughness);
@@ -392,7 +396,7 @@ void main(void)
     }
   }
 
-  vec3 color = ambient + Lo;
+  vec3 color = ambient + Lo + emissive;
 
   if ( use_ambient_debugging )
   {

@@ -381,6 +381,7 @@ bool Geometry::LoadMesh( const char * _path )
     material.mColorMapMetallic.mColor = glm::vec4( 0.0f );
     material.mColorMapAO.mColor = glm::vec4( 1.0f );
     material.mColorMapAmbient.mColor = glm::vec4( 1.0f );
+    material.mColorMapEmissive.mColor = glm::vec4( 0.0f );
 
     LoadColorMap( scene->mMaterials[ i ], material.mColorMapDiffuse, aiTextureType_DIFFUSE, "diffuse", folder, true );
     if ( !LoadColorMap( scene->mMaterials[ i ], material.mColorMapNormals, aiTextureType_NORMAL_CAMERA, "normals", folder ) )
@@ -396,6 +397,7 @@ bool Geometry::LoadMesh( const char * _path )
     LoadColorMap( scene->mMaterials[ i ], material.mColorMapMetallic, aiTextureType_METALNESS, "metallic", folder );
     LoadColorMap( scene->mMaterials[ i ], material.mColorMapAO, aiTextureType_AMBIENT_OCCLUSION, "AO", folder );
     LoadColorMap( scene->mMaterials[ i ], material.mColorMapAmbient, aiTextureType_AMBIENT, "ambient", folder );
+    LoadColorMap( scene->mMaterials[ i ], material.mColorMapEmissive, aiTextureType_EMISSIVE, "emissive", folder );
 
     float f = 0.0f;
 
@@ -511,6 +513,7 @@ void Geometry::Render( const glm::mat4x4 & _worldRootMatrix, Renderer::Shader * 
       SetColorMap( _shader, "map_metallic", material.mColorMapMetallic );
       SetColorMap( _shader, "map_ao", material.mColorMapAO );
       SetColorMap( _shader, "map_ambient", material.mColorMapAmbient );
+      SetColorMap( _shader, "map_emissive", material.mColorMapEmissive );
 
       glBindVertexArray( mesh.mVertexArrayObject );
 
