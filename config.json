@@ -16,15 +16,18 @@
   "skyImages":[
     {
       "reflection": "Skyboxes/Barce_Rooftop_C_3k.hdr",
-      "env": "Skyboxes/Barce_Rooftop_C_Env.hdr"
+      "env": "Skyboxes/Barce_Rooftop_C_Env.hdr",
+      "metadata": "Skyboxes/Barcelona_Rooftops.ibl"
     },
     {
       "reflection": "Skyboxes/GCanyon_C_YumaPoint_3k.hdr",
-      "env": "Skyboxes/GCanyon_C_YumaPoint_Env.hdr"
+      "env": "Skyboxes/GCanyon_C_YumaPoint_Env.hdr",
+      "metadata": "Skyboxes/GrandCanyon_C_YumaPoint.ibl"
     },
     {
       "reflection": "Skyboxes/Tokyo_BigSight_3k.hdr",
-      "env": "Skyboxes/Tokyo_BigSight_Env.hdr"
-    }    
+      "env": "Skyboxes/Tokyo_BigSight_Env.hdr",
+      "metadata": "Skyboxes/Tokyo_BigSight.iblr"
+    }
   ]
 }

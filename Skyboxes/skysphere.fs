@@ -44,13 +44,11 @@ float random( vec3 v )
 vec2 sphere_to_polar( vec3 normal )
 {
   normal = normalize( normal );
-  return vec2( atan(normal.z, normal.x) / PI / 2.0 + 0.5 + skysphere_rotation, acos(normal.y) / PI );
+  return vec2( ( atan( normal.z, normal.x ) + skysphere_rotation ) / PI / 2.0 + 0.5, acos( normal.y ) / PI );
 }
 
 void main(void)
 {
-  // vec3 sky_color = textureLod( tex_skysphere, sphere_to_polar( normalize( out_worldpos ) ), skysphere_blur ).rgb;
-
   vec3 sky_env = textureLod( tex_skyenv, sphere_to_polar( normalize( out_worldpos ) ), skysphere_blur ).rgb;
   vec3 sky_color = textureLod( tex_skysphere, sphere_to_polar( normalize( out_worldpos ) ), skysphere_blur ).rgb;
 

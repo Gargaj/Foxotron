@@ -60,7 +60,7 @@ vec4 sample_colormap( ColorMap map, vec2 uv)
 vec2 sphere_to_polar( vec3 normal )
 {
   normal = normalize( normal );
-  return vec2( atan(normal.z, normal.x) / PI / 2.0 + 0.5 + skysphere_rotation, acos(normal.y) / PI );
+  return vec2( ( atan( normal.z, normal.x ) + skysphere_rotation ) / PI / 2.0 + 0.5, acos( normal.y ) / PI );
 }
 
 vec3 sample_irradiance_fast( vec3 normal )
