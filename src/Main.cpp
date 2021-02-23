@@ -297,6 +297,10 @@ int main( int argc, const char * argv[] )
   settings.mWindowMode = RENDERER_WINDOWMODE_WINDOWED;
   settings.mMultisampling = false;
 #ifndef _DEBUG
+  settings.mWidth = 1920; // TODO maybe replace this with actual screen size?
+  settings.mHeight = 1080;
+  settings.mWindowMode = RENDERER_WINDOWMODE_FULLSCREEN;
+  settings.mMultisampling = true;
   if ( !SetupDialog::Open( &settings ) )
   {
     return -14;
