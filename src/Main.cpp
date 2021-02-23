@@ -1,4 +1,6 @@
 #include <stdio.h>
+#define _USE_MATH_DEFINES
+#include <cmath>
 #include <algorithm>
 
 #include "Geometry.h"
@@ -153,17 +155,59 @@ void loadBrdfLookupTable()
   }
 }
 
+// Reads a single string value from an HDRLabs IBL file.
+// Returns an empty string on error.
+static std::string parseIblField( const char* szPath, const char* szTargetSection, const char* szTargetKey )
+{
+  FILE* fp = fopen( szPath, "r" );
+  if ( !fp ) return "";
+
+  char section[ 100 ] = { '\0' };
+  std::string found;
+
+  while ( true )
+  {
+    char key[ 100 ] = { '\0' };
+    char value[ 100 ] = { '\0' };
+
+    int sectionRead = fscanf( fp, "[%[^]]\n", section );
+    int keyValueRead = fscanf( fp, "%s = %s\n", key, value );
+
+    if ( sectionRead == EOF || keyValueRead == EOF )
+    {
+      break;
+    }
+
+    if ( keyValueRead < 2 ) continue;
+
+    if ( !strncmp( section, szTargetSection, sizeof( section ) ) && !strncmp( key, szTargetKey, sizeof( key ) ) )
+    {
+      found = value;
+      break;
+    }
+  }
+
+  fclose( fp );
+  return found;
+}
 
 struct SkyImages
 {
   Renderer::Texture* reflection = NULL;
   Renderer::Texture* env = NULL;
+  float sunYaw = 0.f;
+  float sunPitch = 0.f;
+  glm::vec3 sunColor{ 1.f, 1.f, 1.f };
 };
 
 SkyImages gSkyImages;
 
-void loadSkyImages( const char* reflectionPath, const char* envPath )
+void loadSkyImages( const jsonxx::Object & obj )
 {
+  const char* reflectionPath = obj.get<jsonxx::String>( "reflection" ).c_str();
+
+  // Reflection map
+
   if ( gSkyImages.reflection )
   {
     Renderer::ReleaseTexture( gSkyImages.reflection );
@@ -185,8 +229,11 @@ void loadSkyImages( const char* reflectionPath, const char* envPath )
     gSkyImages.env = NULL;
   }
 
-  if ( envPath )
+  // Irradiance map
+
+  if ( obj.has<jsonxx::String>( "env" ) )
   {
+    const char* envPath =  obj.get<jsonxx::String>( "env" ).c_str();
     gSkyImages.env = Renderer::CreateRGBA8TextureFromFile( envPath );
 
     if ( gSkyImages.env )
@@ -199,6 +246,22 @@ void loadSkyImages( const char* reflectionPath, const char* envPath )
     else
     {
       printf( "Couldn't load environment map '%s'!\n", envPath );
+    }
+  }
+
+  // Sun direction
+
+  if ( obj.has<jsonxx::String>( "metadata" ) )
+  {
+    const char* iblPath = obj.get<jsonxx::String>( "metadata" ).c_str();
+    glm::vec2 uv(
+      atof( parseIblField( iblPath, "Sun", "SUNu" ).c_str() ),
+      atof( parseIblField( iblPath, "Sun", "SUNv" ).c_str() ) );
+
+    if ( uv != glm::vec2( 0.f, 0.f ) )
+    {
+      gSkyImages.sunYaw = M_PI * (-2. * uv.x + 0.5f);
+      gSkyImages.sunPitch = (.5f - uv.y) * M_PI;
     }
   }
 }
@@ -303,9 +366,9 @@ int main( int argc, const char * argv[] )
     0.0f, 0.0f, 0.0f, 1.0f );
 
   auto firstSkyImages = options.get<jsonxx::Array>( "skyImages" ).get<jsonxx::Object>( 0 );
-  loadSkyImages(
-    firstSkyImages.get<jsonxx::String>( "reflection" ).c_str(),
-    firstSkyImages.has<jsonxx::String>( "env" ) ? firstSkyImages.get<jsonxx::String>( "env" ).c_str() : NULL );
+  loadSkyImages( firstSkyImages );
+  lightYaw = gSkyImages.sunYaw;
+  lightPitch = gSkyImages.sunPitch;
 
   loadBrdfLookupTable();
 
@@ -426,9 +489,9 @@ int main( int argc, const char * argv[] )
               bool selected = ( gSkyImages.reflection && gSkyImages.reflection->mFilename == filename );
               if ( ImGui::MenuItem( filename.c_str(), NULL, &selected ) )
               {
-                loadSkyImages(
-                  images.get<jsonxx::String>( "reflection" ).c_str(),
-                  images.has<jsonxx::String>( "env" ) ? images.get<jsonxx::String>( "env" ).c_str() : NULL );
+                loadSkyImages( images );
+                lightYaw = gSkyImages.sunYaw;
+                lightPitch = gSkyImages.sunPitch;
               }
             }
           }
@@ -657,7 +720,7 @@ int main( int argc, const char * argv[] )
       skysphereShader->SetConstant( "background_color", clearColor );
       skysphereShader->SetConstant( "skysphere_blur", skysphereBlur );
       skysphereShader->SetConstant( "skysphere_opacity", skysphereOpacity );
-      skysphereShader->SetConstant( "skysphere_rotation", lightYaw );
+      skysphereShader->SetConstant( "skysphere_rotation", lightYaw - gSkyImages.sunYaw  );
       skysphereShader->SetConstant( "exposure", exposure );
       skysphereShader->SetConstant( "frame_count", frameCount );
 
@@ -685,13 +748,13 @@ int main( int argc, const char * argv[] )
     fillLightDirection = glm::rotateY( fillLightDirection, lightYaw + 0.8f );
 
     gCurrentShader->SetConstant( "lights[0].direction", lightDirection );
-    gCurrentShader->SetConstant( "lights[0].color", glm::vec3( 1.0f ) );
+    gCurrentShader->SetConstant( "lights[0].color", gSkyImages.sunColor );
     gCurrentShader->SetConstant( "lights[1].direction", fillLightDirection );
     gCurrentShader->SetConstant( "lights[1].color", glm::vec3( 0.5f ) );
     gCurrentShader->SetConstant( "lights[2].direction", -fillLightDirection );
     gCurrentShader->SetConstant( "lights[2].color", glm::vec3( 0.25f ) );
 
-    gCurrentShader->SetConstant( "skysphere_rotation", lightYaw );
+    gCurrentShader->SetConstant( "skysphere_rotation", lightYaw - gSkyImages.sunYaw );
 
     viewMatrix = glm::lookAtRH( cameraPosition + gCameraTarget, gCameraTarget, glm::vec3( 0.0f, 1.0f, 0.0f ) );
     gCurrentShader->SetConstant( "mat_view", viewMatrix );

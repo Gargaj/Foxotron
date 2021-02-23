@@ -12,6 +12,8 @@ const bool use_normal_variation_to_roughness = true;
 const bool use_map_debugging = false;
 // Splits the screen in two and shows image-based specular (left) and diffuse (right) shading.
 const bool use_ambient_debugging = false;
+// Multiplies analytic light's color with this constant because otherwise they look really pathetic.
+const float lighting_boost = 2.0f;
 
 struct Light
 {
@@ -131,7 +133,7 @@ float geometry_smith( vec3 N, vec3 V, vec3 L, float roughness )
 vec2 sphere_to_polar( vec3 normal )
 {
   normal = normalize( normal );
-  return vec2( atan(normal.z, normal.x) / PI / 2.0 + 0.5 + skysphere_rotation, acos(normal.y) / PI );
+  return vec2( ( atan( normal.z, normal.x ) + skysphere_rotation ) / PI / 2.0 + 0.5, acos( normal.y ) / PI );
 }
 
 vec3 sample_sky( vec3 normal )
@@ -314,11 +316,11 @@ void main(void)
 
   // Add contributions from analytic lights only if we don't have a skybox.
 
-  if (!use_ibl)
   {
-    for ( int i = 0; i < lights.length(); i++ )
+    int num_lights = use_ibl ? 1 : lights.length();
+    for ( int i = 0; i < num_lights; i++ )
     {
-      vec3 radiance = lights[ i ].color;
+      vec3 radiance = lights[ i ].color * lighting_boost;
 
       vec3 L = -normalize( lights[ i ].direction );
       vec3 H = normalize( V + L );
