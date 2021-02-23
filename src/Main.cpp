@@ -492,6 +492,7 @@ int main( int argc, const char * argv[] )
               ShowColorMapInImGui( "Metallic", it->second.mColorMapMetallic );
               ShowColorMapInImGui( "Roughness", it->second.mColorMapRoughness );
               ShowColorMapInImGui( "AO", it->second.mColorMapAO );
+              ShowColorMapInImGui( "Emissive", it->second.mColorMapEmissive );
               ImGui::EndTabBar();
             }
             ImGui::Unindent();

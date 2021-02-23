@@ -51,6 +51,7 @@ public:
     ColorMap mColorMapMetallic;
     ColorMap mColorMapAO;
     ColorMap mColorMapAmbient;
+    ColorMap mColorMapEmissive;
 
     float mSpecularShininess;
   };

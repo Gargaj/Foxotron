@@ -46,6 +46,7 @@ uniform ColorMap map_roughness;
 uniform ColorMap map_metallic;
 uniform ColorMap map_ao;
 uniform ColorMap map_ambient;
+uniform ColorMap map_emissive;
 
 out vec4 frag_color;
 
@@ -120,6 +121,8 @@ void main(void)
     vec3 specular = specularmap.rgb * calculate_specular( normal, lights[ i ].direction ) * specularmap.a;
     color += (diffusemap + specular) * ndotl * lights[ i ].color;
   }
+
+  color += sample_colormap( map_emissive, out_texcoord ).rgb;
 
   frag_color = vec4( pow( color * exposure, vec3(1. / 2.2) ), 1.0f );
 }
