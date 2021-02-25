@@ -99,6 +99,23 @@ bool Open( RENDERER_SETTINGS * _settings )
     return false;
   }
 
+  if ( _settings->mWindowMode == RENDERER_WINDOWMODE_WINDOWED )
+  {
+    const GLFWvidmode * mode = glfwGetVideoMode( glfwGetPrimaryMonitor() );
+    if ( mode )
+    {
+      int monitorX, monitorY;
+      glfwGetMonitorPos( glfwGetPrimaryMonitor(), &monitorX, &monitorY );
+
+      int windowWidth, windowHeight;
+      glfwGetWindowSize( mWindow, &windowWidth, &windowHeight );
+
+      glfwSetWindowPos( mWindow,
+        monitorX + ( mode->width - windowWidth ) / 2,
+        monitorY + ( mode->height - windowHeight ) / 2 );
+    }
+  }
+
   glfwMakeContextCurrent( mWindow );
 
   glfwSetDropCallback( mWindow, drop_callback );
