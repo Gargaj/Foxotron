@@ -361,7 +361,8 @@ int main( int argc, const char * argv[] )
   float exposure = 1.0f;
   bool showImGui = true;
   bool edgedFaces = false;
-
+  float hideCursorTimer = 0.0f;
+  bool showModelInfo = false;
   bool xzySpace = false;
   const glm::mat4x4 xzyMatrix(
     1.0f, 0.0f, 0.0f, 0.0f,
@@ -397,7 +398,8 @@ int main( int argc, const char * argv[] )
     ImGui::NewFrame();
 
     bool openFileDialog = false;
-    static bool showModelInfo = false;
+    
+    ImGui::SetMouseCursor( hideCursorTimer <= 5.0f ? ImGuiMouseCursor_Arrow : ImGuiMouseCursor_None );
 
     if ( ImGui::IsKeyPressed( GLFW_KEY_F, false ) )
     {
@@ -713,7 +715,17 @@ int main( int argc, const char * argv[] )
         const float aspect = 1.1f;
         gCameraDistance *= io.MouseWheel < 0 ? aspect : 1 / aspect;
       }
+
+      if ( io.MouseDelta.x != 0.0f && io.MouseDelta.y != 0.0f )
+      {
+        hideCursorTimer = 0.0f;
+      }
     }
+    else
+    {
+      hideCursorTimer = 0.0f;
+    }
+    hideCursorTimer += io.DeltaTime;
 
     ImGui::Render();
 
