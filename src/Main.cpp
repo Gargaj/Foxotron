@@ -418,6 +418,36 @@ int main( int argc, const char * argv[] )
     {
       automaticCamera = !automaticCamera;
     }
+    if ( ImGui::IsKeyPressed( GLFW_KEY_PAGE_UP, false ) )
+    {
+      const int shaderCount = options.get<jsonxx::Array>( "shaders" ).size();
+      for ( int i = 0; i < shaderCount; i++ )
+      {
+        const jsonxx::Object & shaderConfig = options.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( i );
+        if ( &shaderConfig == gCurrentShaderConfig )
+        {
+          const jsonxx::Object & newShaderConfig = options.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( ( i - 1 + shaderCount ) % shaderCount );
+          LoadShaderConfig( &newShaderConfig );
+          gModel.RebindVertexArray( gCurrentShader );
+          break;
+        }
+      }
+    }
+    if ( ImGui::IsKeyPressed( GLFW_KEY_PAGE_DOWN, false ) )
+    {
+      const int shaderCount = options.get<jsonxx::Array>( "shaders" ).size();
+      for ( int i = 0; i < shaderCount; i++ )
+      {
+        const jsonxx::Object & shaderConfig = options.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( i );
+        if ( &shaderConfig == gCurrentShaderConfig )
+        {
+          const jsonxx::Object & newShaderConfig = options.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( ( i + 1 + shaderCount ) % shaderCount );
+          LoadShaderConfig( &newShaderConfig );
+          gModel.RebindVertexArray( gCurrentShader );
+          break;
+        }
+      }
+    }
 
     if ( showImGui )
     {
@@ -488,8 +518,8 @@ int main( int argc, const char * argv[] )
             if ( ImGui::MenuItem( name.c_str(), NULL, &selected ) )
             {
               LoadShaderConfig( &shaderConfig );
+              gModel.RebindVertexArray( gCurrentShader );
             }
-            gModel.RebindVertexArray( gCurrentShader );
           }
           if ( gCurrentShaderConfig && gCurrentShaderConfig->get<jsonxx::Boolean>( "showSkybox" ) )
           {
