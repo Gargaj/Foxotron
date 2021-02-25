@@ -80,28 +80,6 @@ void ReleaseTexture( Texture * tex );
 
 void SetShader( Shader * _shader );
 
-enum MOUSEEVENTTYPE
-{
-  MOUSEEVENTTYPE_DOWN = 0,
-  MOUSEEVENTTYPE_MOVE,
-  MOUSEEVENTTYPE_UP,
-  MOUSEEVENTTYPE_SCROLL
-};
-enum MOUSEBUTTON
-{
-  MOUSEBUTTON_LEFT = 0,
-  MOUSEBUTTON_RIGHT,
-  MOUSEBUTTON_MIDDLE,
-};
-struct MouseEvent
-{
-  MOUSEEVENTTYPE eventType;
-  float x;
-  float y;
-  MOUSEBUTTON button;
-};
-extern MouseEvent mouseEventBuffer[ 512 ];
-extern int mouseEventBufferCount;
 extern std::string dropEventBuffer[ 512 ];
 extern int dropEventBufferCount;
 } // namespace

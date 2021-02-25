@@ -611,8 +611,6 @@ int main( int argc, const char * argv[] )
       ImGui::End();
     }
 
-    ImGui::Render();
-
     //////////////////////////////////////////////////////////////////////////
     // Drag'n'drop
 
@@ -628,99 +626,96 @@ int main( int argc, const char * argv[] )
 
     if ( !io.WantCaptureMouse )
     {
-      for ( int i = 0; i < Renderer::mouseEventBufferCount; i++ )
+      ImVec2 mouseEvent = ImGui::GetMousePos();
+
+      if ( ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
       {
-        Renderer::MouseEvent & mouseEvent = Renderer::mouseEventBuffer[ i ];
-        switch ( mouseEvent.eventType )
-        {
-          case Renderer::MOUSEEVENTTYPE_MOVE:
-            {
-              const float panSpeed = 0.005f;
-              const float rotationSpeed = 130.0f;
-              if ( rotatingCamera )
-              {
-                cameraYaw -= ( mouseEvent.x - mouseClickPosX ) / rotationSpeed;
-                cameraPitch += ( mouseEvent.y - mouseClickPosY ) / rotationSpeed;
+        rotatingCamera = true;
+        automaticCamera = false;
+        mouseClickPosX = mouseEvent.x;
+        mouseClickPosY = mouseEvent.y;
+      }
+      if ( !ImGui::IsMouseDown( ImGuiMouseButton_Left ) )
+      {
+        rotatingCamera = false;
+      }
 
-                // Clamp to avoid gimbal lock
-                cameraPitch = std::min( cameraPitch, 1.5f );
-                cameraPitch = std::max( cameraPitch, -1.5f );
-              }
-              if ( movingLight )
-              {
-                lightYaw += ( mouseEvent.x - mouseClickPosX ) / rotationSpeed;
-                lightPitch -= ( mouseEvent.y - mouseClickPosY ) / rotationSpeed;
+      if ( ImGui::IsMouseClicked( ImGuiMouseButton_Right ) )
+      {
+        movingLight = true;
+        mouseClickPosX = mouseEvent.x;
+        mouseClickPosY = mouseEvent.y;
+      }
+      if ( !ImGui::IsMouseDown( ImGuiMouseButton_Right ) )
+      {
+        movingLight = false;
+      }
 
-                // Clamp to avoid gimbal lock
-                lightPitch = std::min( lightPitch, 1.5f );
-                lightPitch = std::max( lightPitch, -1.5f );
-              }
-              if ( movingCamera )
-              {
-                float moveX = ( mouseEvent.x - mouseClickPosX ) / panSpeed;
-                float moveY = ( mouseEvent.y - mouseClickPosY ) / panSpeed;
+      if ( ImGui::IsMouseClicked( ImGuiMouseButton_Middle ) )
+      {
+        movingCamera = true;
+        mouseClickPosX = mouseEvent.x;
+        mouseClickPosY = mouseEvent.y;
+      }
+      if ( !ImGui::IsMouseDown( ImGuiMouseButton_Middle ) )
+      {
+        movingCamera = false;
+      }
 
-                glm::vec3 newBaseZ( 0.0f, 0.0f, -1.0f );
-                newBaseZ = glm::rotateX( newBaseZ, cameraPitch );
-                newBaseZ = glm::rotateY( newBaseZ, cameraYaw );
-                newBaseZ = -newBaseZ;
+      const float panSpeed = 1000.0f;
+      const float rotationSpeed = 130.0f;
+      if ( rotatingCamera )
+      {
+        cameraYaw -= ( mouseEvent.x - mouseClickPosX ) / rotationSpeed;
+        cameraPitch += ( mouseEvent.y - mouseClickPosY ) / rotationSpeed;
 
-                glm::vec3 up( 0.0f, 1.0f, 0.0f );
-                glm::vec3 newBaseX = glm::cross( up, newBaseZ );
-                glm::vec3 newBaseY = glm::cross( newBaseZ, newBaseX );
+        // Clamp to avoid gimbal lock
+        cameraPitch = std::min( cameraPitch, 1.5f );
+        cameraPitch = std::max( cameraPitch, -1.5f );
 
-                gCameraTarget += newBaseX * ( moveX / gCameraDistance );
-                gCameraTarget += newBaseY * ( moveY / gCameraDistance );
-              }
-              mouseClickPosX = mouseEvent.x;
-              mouseClickPosY = mouseEvent.y;
-            }
-            break;
-          case Renderer::MOUSEEVENTTYPE_DOWN:
-            {
-              if ( mouseEvent.button == Renderer::MOUSEBUTTON_LEFT )
-              {
-                rotatingCamera = true;
-                automaticCamera = false;
-              }
-              else if ( mouseEvent.button == Renderer::MOUSEBUTTON_RIGHT )
-              {
-                movingLight = true;
-              }
-              else if ( mouseEvent.button == Renderer::MOUSEBUTTON_MIDDLE )
-              {
-                movingCamera = true;
-              }
-              mouseClickPosX = mouseEvent.x;
-              mouseClickPosY = mouseEvent.y;
-            }
-            break;
-          case Renderer::MOUSEEVENTTYPE_UP:
-            {
-              if ( mouseEvent.button == Renderer::MOUSEBUTTON_LEFT )
-              {
-                rotatingCamera = false;
-              }
-              else if ( mouseEvent.button == Renderer::MOUSEBUTTON_RIGHT )
-              {
-                movingLight = false;
-              }
-              else if ( mouseEvent.button == Renderer::MOUSEBUTTON_MIDDLE )
-              {
-                movingCamera = false;
-              }
-            }
-            break;
-          case Renderer::MOUSEEVENTTYPE_SCROLL:
-            {
-              const float aspect = 1.1f;
-              gCameraDistance *= mouseEvent.y < 0 ? aspect : 1 / aspect;
-            }
-            break;
-        }
+        mouseClickPosX = mouseEvent.x;
+        mouseClickPosY = mouseEvent.y;
+      }
+      if ( movingLight )
+      {
+        lightYaw += ( mouseEvent.x - mouseClickPosX ) / rotationSpeed;
+        lightPitch -= ( mouseEvent.y - mouseClickPosY ) / rotationSpeed;
+
+        // Clamp to avoid gimbal lock
+        lightPitch = std::min( lightPitch, 1.5f );
+        lightPitch = std::max( lightPitch, -1.5f );
+
+        mouseClickPosX = mouseEvent.x;
+        mouseClickPosY = mouseEvent.y;
+      }
+      if ( movingCamera )
+      {
+        const float moveX = ( mouseEvent.x - mouseClickPosX ) / panSpeed;
+        const float moveY = ( mouseEvent.y - mouseClickPosY ) / panSpeed;
+
+        glm::vec3 newBaseZ( 0.0f, 0.0f, -1.0f );
+        newBaseZ = glm::rotateX( newBaseZ, cameraPitch );
+        newBaseZ = glm::rotateY( newBaseZ, cameraYaw );
+        newBaseZ = -newBaseZ;
+
+        glm::vec3 up( 0.0f, 1.0f, 0.0f );
+        glm::vec3 newBaseX = glm::cross( up, newBaseZ );
+        glm::vec3 newBaseY = glm::cross( newBaseZ, newBaseX );
+
+        gCameraTarget += newBaseX * moveX * gCameraDistance;
+        gCameraTarget += newBaseY * moveY * gCameraDistance;
+
+        mouseClickPosX = mouseEvent.x;
+        mouseClickPosY = mouseEvent.y;
+      }
+      if ( io.MouseWheel != 0.0f )
+      {
+        const float aspect = 1.1f;
+        gCameraDistance *= io.MouseWheel < 0 ? aspect : 1 / aspect;
       }
     }
-    Renderer::mouseEventBufferCount = 0;
+
+    ImGui::Render();
 
     //////////////////////////////////////////////////////////////////////////
     // Camera and lights

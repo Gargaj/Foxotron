@@ -10,6 +10,9 @@ Check [the wiki](https://github.com/Gargaj/Foxotron/wiki) for information on how
 ### Keyboard shortcuts
 * F11: Toggle menu
 * F: Refocus camera on mesh
+* W: Toggle wireframe / edged faces
+* C: Toggle auto camera
+* PgUp / PgDn: Cycle through shaders
 * Alt-F4: Enter hyberwormtunnel
 
 ### Mouse operations

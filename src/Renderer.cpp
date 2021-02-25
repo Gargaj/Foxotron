@@ -39,9 +39,6 @@ static void error_callback( int error, const char * description )
   }
   printf( "%s\n", description );
 }
-void cursor_position_callback( GLFWwindow * window, double xpos, double ypos );
-void mouse_button_callback( GLFWwindow * window, int button, int action, int mods );
-void scroll_callback( GLFWwindow * window, double xoffset, double yoffset );
 void drop_callback( GLFWwindow * window, int path_count, const char * paths[] );
 
 bool Open( RENDERER_SETTINGS * _settings )
@@ -105,9 +102,6 @@ bool Open( RENDERER_SETTINGS * _settings )
   glfwMakeContextCurrent( mWindow );
 
   glfwSetDropCallback( mWindow, drop_callback );
-  glfwSetCursorPosCallback( mWindow, cursor_position_callback );
-  glfwSetMouseButtonCallback( mWindow, mouse_button_callback );
-  glfwSetScrollCallback( mWindow, scroll_callback );
 
   glewExperimental = GL_TRUE;
   GLenum err = glewInit();
@@ -147,48 +141,8 @@ bool Open( RENDERER_SETTINGS * _settings )
   return true;
 }
 
-MouseEvent mouseEventBuffer[ 512 ];
-int mouseEventBufferCount = 0;
 std::string dropEventBuffer[ 512 ];
 int dropEventBufferCount = 0;
-void cursor_position_callback( GLFWwindow * window, double xpos, double ypos )
-{
-  mouseEventBuffer[ mouseEventBufferCount ].eventType = MOUSEEVENTTYPE_MOVE;
-  mouseEventBuffer[ mouseEventBufferCount ].x = (float) xpos;
-  mouseEventBuffer[ mouseEventBufferCount ].y = (float) ypos;
-  if ( glfwGetMouseButton( window, GLFW_MOUSE_BUTTON_LEFT ) == GLFW_PRESS ) mouseEventBuffer[ mouseEventBufferCount ].button = MOUSEBUTTON_LEFT;
-  mouseEventBufferCount++;
-}
-void mouse_button_callback( GLFWwindow * window, int button, int action, int mods )
-{
-  if ( action == GLFW_PRESS )
-  {
-    mouseEventBuffer[ mouseEventBufferCount ].eventType = MOUSEEVENTTYPE_DOWN;
-  }
-  else if ( action == GLFW_RELEASE )
-  {
-    mouseEventBuffer[ mouseEventBufferCount ].eventType = MOUSEEVENTTYPE_UP;
-  }
-  double xpos, ypos;
-  glfwGetCursorPos( window, &xpos, &ypos );
-  mouseEventBuffer[ mouseEventBufferCount ].x = (float) xpos;
-  mouseEventBuffer[ mouseEventBufferCount ].y = (float) ypos;
-  switch ( button )
-  {
-    case GLFW_MOUSE_BUTTON_MIDDLE: mouseEventBuffer[ mouseEventBufferCount ].button = MOUSEBUTTON_MIDDLE; break;
-    case GLFW_MOUSE_BUTTON_RIGHT:  mouseEventBuffer[ mouseEventBufferCount ].button = MOUSEBUTTON_RIGHT; break;
-    case GLFW_MOUSE_BUTTON_LEFT:
-    default:                mouseEventBuffer[ mouseEventBufferCount ].button = MOUSEBUTTON_LEFT; break;
-  }
-  mouseEventBufferCount++;
-}
-void scroll_callback( GLFWwindow * window, double xoffset, double yoffset )
-{
-  mouseEventBuffer[ mouseEventBufferCount ].eventType = MOUSEEVENTTYPE_SCROLL;
-  mouseEventBuffer[ mouseEventBufferCount ].x = (float) xoffset;
-  mouseEventBuffer[ mouseEventBufferCount ].y = (float) yoffset;
-  mouseEventBufferCount++;
-}
 void drop_callback( GLFWwindow * window, int path_count, const char * paths[] )
 {
   for ( int i = 0; i < path_count; i++ )
@@ -198,7 +152,6 @@ void drop_callback( GLFWwindow * window, int path_count, const char * paths[] )
   }
 }
 
-
 void StartFrame( glm::vec4 & clearColor )
 {
   glClearColor( clearColor.r, clearColor.g, clearColor.b, clearColor.a );
@@ -207,10 +160,8 @@ void StartFrame( glm::vec4 & clearColor )
   glEnable( GL_DEPTH_TEST );
 }
 
-
 void EndFrame()
 {
-  mouseEventBufferCount = 0;
   dropEventBufferCount = 0;
   glfwSwapBuffers( mWindow );
   glfwPollEvents();
@@ -220,6 +171,7 @@ bool WantsToQuit()
 {
   return glfwWindowShouldClose( mWindow ) || !run;
 }
+
 void Close()
 {
   glfwDestroyWindow( mWindow );
