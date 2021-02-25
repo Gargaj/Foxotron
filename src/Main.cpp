@@ -410,6 +410,15 @@ int main( int argc, const char * argv[] )
     {
       showImGui = !showImGui;
     }
+    if ( ImGui::IsKeyPressed( GLFW_KEY_W, false ) )
+    {
+      edgedFaces = !edgedFaces;
+    }
+    if ( ImGui::IsKeyPressed( GLFW_KEY_C, false ) )
+    {
+      automaticCamera = !automaticCamera;
+    }
+
     if ( showImGui )
     {
       if ( ImGui::BeginMainMenuBar() )
