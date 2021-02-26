@@ -9,6 +9,7 @@ uniform bool has_tex_skyenv;
 uniform float skysphere_rotation;
 uniform float skysphere_blur;
 uniform float skysphere_opacity;
+uniform float skysphere_mip_count;
 uniform float exposure;
 uniform uint frame_count;
 uniform vec4 background_color;
@@ -49,10 +50,10 @@ vec2 sphere_to_polar( vec3 normal )
 
 void main(void)
 {
-  vec3 sky_env = textureLod( tex_skyenv, sphere_to_polar( normalize( out_worldpos ) ), skysphere_blur ).rgb;
-  vec3 sky_color = textureLod( tex_skysphere, sphere_to_polar( normalize( out_worldpos ) ), skysphere_blur ).rgb;
+  vec3 sky_env = textureLod( tex_skyenv, sphere_to_polar( normalize( out_worldpos ) ), 0.0f ).rgb;
+  vec3 sky_color = textureLod( tex_skysphere, sphere_to_polar( normalize( out_worldpos ) ), skysphere_blur * skysphere_mip_count ).rgb;
 
-  vec3 color = mix( background_color.rgb, mix( sky_color, sky_env, skysphere_blur / 8.0 ) , skysphere_opacity );
+  vec3 color = mix( background_color.rgb, mix( sky_color, sky_env, skysphere_blur ) , skysphere_opacity );
   color *= exposure;
   color = color / (vec3(1.) + color);
   color = pow( color, vec3( 1. / 2.2 ));

@@ -497,7 +497,7 @@ int main( int argc, const char * argv[] )
           ImGui::Separator();
 
           ImGui::DragFloat( "Environment exposure", &exposure, 0.01f, 0.1f, 4.0f );
-          ImGui::DragFloat( "Sky blur", &skysphereBlur, 0.1f, 0.0f, 9.0f );
+          ImGui::DragFloat( "Sky blur", &skysphereBlur, 0.01f, 0.0f, 1.0f );
           ImGui::DragFloat( "Sky opacity", &skysphereOpacity, 0.02f, 0.0f, 1.0f );
 #ifdef _DEBUG
           ImGui::Separator();
@@ -780,7 +780,9 @@ int main( int argc, const char * argv[] )
 
       if ( gSkyImages.reflection )
       {
+        const float mipCount = floor( log2( gSkyImages.reflection->mHeight ) );
         skysphereShader->SetTexture( "tex_skysphere", gSkyImages.reflection );
+        skysphereShader->SetConstant( "skysphere_mip_count", mipCount );
       }
 
       if ( gSkyImages.env )
