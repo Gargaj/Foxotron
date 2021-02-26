@@ -4,6 +4,8 @@
 
 ASSIMP based general purpose model viewer ("turntable") created for the Revision 2021 3D Graphics Competition
 
+![image](https://user-images.githubusercontent.com/1702533/109347365-5d7d5880-7873-11eb-98ff-743cb26e9606.png)
+
 ## Usage
 Check [the wiki](https://github.com/Gargaj/Foxotron/wiki) for information on how to use it.
 
