@@ -617,12 +617,20 @@ int main( int argc, const char * argv[] )
     if ( showHelpText )
     {
       ImGui::SetNextWindowPos( ImVec2( io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f ), ImGuiCond_Appearing, ImVec2( 0.5f, 0.5f ) );
+      ImGui::SetNextWindowSize( ImVec2( 380.0f, 190.0f ) );
       ImGui::SetNextWindowBgAlpha( 0.5f );
 
-      ImGui::Begin( "Warning", &showHelpText, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove );
+      ImGui::Begin( "HelpText", &showHelpText, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove );
+      ImGui::TextColored( ImColor( 255, 127, 0 ), "Welcome to FOXOTRON!" );
+      ImGui::NewLine();
       ImGui::Text( "To load a model:" );
       ImGui::BulletText( "Use File > Open in the menu in the top left" );
       ImGui::BulletText( "Or drag'n'drop a model here" );
+      ImGui::NewLine();
+      ImGui::Text( "Once a model is loaded:" );
+      ImGui::BulletText( "Left mouse button to rotate" );
+      ImGui::BulletText( "Right mouse button to move light / rotate sky" );
+      ImGui::BulletText( "Middle mouse button to pan camera" );
       ImGui::End();
     }
 
