@@ -613,6 +613,19 @@ int main( int argc, const char * argv[] )
       ImGui::End();
     }
 
+    bool showHelpText = ( gModel.mNodes.size() == 0 );
+    if ( showHelpText )
+    {
+      ImGui::SetNextWindowPos( ImVec2( io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f ), ImGuiCond_Appearing, ImVec2( 0.5f, 0.5f ) );
+      ImGui::SetNextWindowBgAlpha( 0.5f );
+
+      ImGui::Begin( "Warning", &showHelpText, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove );
+      ImGui::Text( "To load a model:" );
+      ImGui::BulletText( "Use File > Open in the menu in the top left" );
+      ImGui::BulletText( "Or drag'n'drop a model here" );
+      ImGui::End();
+    }
+
     //////////////////////////////////////////////////////////////////////////
     // Drag'n'drop
 
