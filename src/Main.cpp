@@ -420,6 +420,10 @@ int main( int argc, const char * argv[] )
     {
       automaticCamera = !automaticCamera;
     }
+    if ( ImGui::IsKeyPressed( GLFW_KEY_O, false ) && ( ImGui::IsKeyDown( GLFW_KEY_LEFT_CONTROL ) || ImGui::IsKeyDown( GLFW_KEY_RIGHT_CONTROL ) ) )
+    {
+      openFileDialog = true;
+    }
     if ( ImGui::IsKeyPressed( GLFW_KEY_PAGE_UP, false ) )
     {
       const int shaderCount = options.get<jsonxx::Array>( "shaders" ).size();
@@ -457,12 +461,12 @@ int main( int argc, const char * argv[] )
       {
         if ( ImGui::BeginMenu( "File" ) )
         {
-          if ( ImGui::MenuItem( "Open model..." ) )
+          if ( ImGui::MenuItem( "Open model...", "Ctrl-O" ) )
           {
             openFileDialog = true;
           }
           ImGui::Separator();
-          if ( ImGui::MenuItem( "Exit" ) )
+          if ( ImGui::MenuItem( "Exit", "Alt-F4" ) )
           {
             appWantsToQuit = true;
           }
@@ -483,13 +487,17 @@ int main( int argc, const char * argv[] )
         }
         if ( ImGui::BeginMenu( "View" ) )
         {
-          ImGui::MenuItem( "Wireframe / Edged faces", NULL, &edgedFaces );
+          ImGui::MenuItem( "Wireframe / Edged faces", "W", &edgedFaces );
+          ImGui::MenuItem( "Show menu", "F11", &showImGui );
           ImGui::Separator();
 
-          ImGui::MenuItem( "Enable idle camera", NULL, &automaticCamera );
-          if ( ImGui::MenuItem( "Re-center camera" ) )
+          ImGui::MenuItem( "Enable idle camera", "C", &automaticCamera );
+          if ( ImGui::MenuItem( "Re-center camera", "F" ) )
           {
             gCameraTarget = ( gModel.mAABBMin + gModel.mAABBMax ) / 2.0f;
+            gCameraDistance = glm::length( gCameraTarget - gModel.mAABBMin ) * 4.0f;
+            cameraYaw = glm::pi<float>() / 4.0f;
+            cameraPitch = 0.25f;
           }
           ImGui::Separator();
 
