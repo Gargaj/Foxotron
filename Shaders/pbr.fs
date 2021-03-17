@@ -259,11 +259,15 @@ void main(void)
   float roughness = 1.0;
   float metallic = 0.0;
   float ao = 1.0;
+  float alpha = 1.0;
 
+  vec4 baseColor_Alpha;
   if ( map_albedo.has_tex )
-    baseColor = sample_colormap( map_albedo, out_texcoord ).xyz;
+    baseColor_alpha = sample_colormap( map_albedo, out_texcoord );
   else
-    baseColor = sample_colormap( map_diffuse, out_texcoord ).xyz;
+    baseColor_alpha = sample_colormap( map_diffuse, out_texcoord );
+  baseColor = baseColor_alpha.xyz;
+  alpha = baseColor_alpha.w;
 
   roughness = sample_colormap( map_roughness, out_texcoord ).x;
   metallic = sample_colormap( map_metallic, out_texcoord ).x;
@@ -409,7 +413,8 @@ void main(void)
     }
   }
 
-  vec3 color = ambient + Lo + emissive;
+  // Premultiplied alpha applied to the diffuse component only
+  vec3 color = (ambient + Lo) * alpha + emissive;
 
   if ( use_ambient_debugging )
   {
@@ -426,5 +431,7 @@ void main(void)
   color = pow( color, vec3(1. / 2.2) );
   float dither = random( uvec3( floatBitsToUint( gl_FragCoord.xy ), frame_count ) );
   color += vec3( (-1.0/256.) + (2./256.) * dither );
-  frag_color = vec4( color, 1.0 );
+  
+  // Technically this alpha may be too transparent, if there is a lot of reflected light we wouldn't see the background, maybe we can approximate it well enough by adding a fresnel term
+  frag_color = vec4( color, alpha );
 }
