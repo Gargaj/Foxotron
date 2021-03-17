@@ -354,17 +354,37 @@ Texture * CreateRGBA8TextureFromFile( const char * szFilename, const bool _loadA
   GLenum internalFormat = _loadAsSRGB ? GL_SRGB8_ALPHA8 : GL_RGBA8;
   GLenum srcFormat = GL_RGBA;
   GLenum format = GL_UNSIGNED_BYTE;
+  bool hasTransparentPixels = false;
   if ( stbi_is_hdr( szFilename ) )
   {
     internalFormat = GL_RGBA32F;
     format = GL_FLOAT;
     data = stbi_loadf( szFilename, &width, &height, &comp, STBI_rgb_alpha );
+    if (!data) return NULL;
+    float* bytes = (float*)data;
+    for (int i = 3; i < width * height * 4; ++i)
+    {
+      if (bytes[i] != 1.0f)
+      {
+        hasTransparentPixels = true;
+        break;
+      }
+    }
   }
   else
   {
     data = stbi_load( szFilename, &width, &height, &comp, STBI_rgb_alpha );
+    if (!data) return NULL;
+    unsigned char* bytes = (unsigned char*)data;
+    for(int i = 3 ; i < width * height * 4; ++i)
+    {
+      if (bytes[i] != 0xFF)
+      {
+        hasTransparentPixels = true;
+        break;
+      }
+    }
   }
-  if ( !data ) return NULL;
 
   GLuint glTexId = 0;
   glGenTextures( 1, &glTexId );
@@ -387,6 +407,7 @@ Texture * CreateRGBA8TextureFromFile( const char * szFilename, const bool _loadA
   tex->mFilename = szFilename;
   tex->mGLTextureID = glTexId;
   tex->mGLTextureUnit = textureUnit++;
+  tex->mTransparent = hasTransparentPixels;
   return tex;
 }
 

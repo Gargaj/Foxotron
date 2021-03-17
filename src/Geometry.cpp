@@ -119,8 +119,8 @@ bool LoadColorMap( aiMaterial * _material, Geometry::ColorMap & _colorMap, aiTex
       break;
     case aiTextureType_DIFFUSE:
     case aiTextureType_BASE_COLOR:
-      result = aiGetMaterialColor( _material, AI_MATKEY_COLOR_DIFFUSE, &color );
-      result2 = aiGetMaterialColor(_material, AI_MATKEY_COLOR_TRANSPARENT, &translucentColor);
+       result = aiGetMaterialColor( _material, AI_MATKEY_COLOR_DIFFUSE, &color );
+      result2 = aiGetMaterialColor( _material, AI_MATKEY_COLOR_TRANSPARENT, &translucentColor );
       if (result2 == AI_SUCCESS)
         color.a = (1.0 - translucentColor.r);
       break;
@@ -128,7 +128,7 @@ bool LoadColorMap( aiMaterial * _material, Geometry::ColorMap & _colorMap, aiTex
       result = aiGetMaterialColor( _material, AI_MATKEY_COLOR_SPECULAR, &color );
       break;
     case aiTextureType_EMISSIVE:
-      result = aiGetMaterialColor(_material, AI_MATKEY_COLOR_EMISSIVE, &color);
+      result = aiGetMaterialColor( _material, AI_MATKEY_COLOR_EMISSIVE, &color );
       break;
   };
   if ( result == AI_SUCCESS )
@@ -251,6 +251,52 @@ bool Geometry::LoadMesh( const char * _path )
     }
   }
 
+  printf("[geometry] Loading %d materials\n", scene->mNumMaterials);
+  for (unsigned int i = 0; i < scene->mNumMaterials; i++)
+  {
+    Material material;
+
+    aiString str = scene->mMaterials[i]->GetName();
+    material.mName = std::string(str.data, str.length);
+    printf("[geometry] Loading material #%d: '%s'\n", i + 1, material.mName.c_str());
+
+    material.mColorMapDiffuse.mColor = glm::vec4(0.5f);
+    material.mColorMapNormals.mColor = glm::vec4(0.0f);
+    material.mColorMapSpecular.mColor = glm::vec4(0.0f);
+    material.mColorMapAlbedo.mColor = glm::vec4(0.5f);
+    material.mColorMapRoughness.mColor = glm::vec4(1.0f);
+    material.mColorMapMetallic.mColor = glm::vec4(0.0f);
+    material.mColorMapAO.mColor = glm::vec4(1.0f);
+    material.mColorMapAmbient.mColor = glm::vec4(1.0f);
+    material.mColorMapEmissive.mColor = glm::vec4(0.0f);
+
+    LoadColorMap(scene->mMaterials[i], material.mColorMapDiffuse, aiTextureType_DIFFUSE, "diffuse", folder, true);
+    if (!LoadColorMap(scene->mMaterials[i], material.mColorMapNormals, aiTextureType_NORMAL_CAMERA, "normals", folder))
+    {
+      LoadColorMap(scene->mMaterials[i], material.mColorMapNormals, aiTextureType_NORMALS, "normals", folder);
+    }
+    LoadColorMap(scene->mMaterials[i], material.mColorMapSpecular, aiTextureType_SPECULAR, "specular", folder);
+    LoadColorMap(scene->mMaterials[i], material.mColorMapAlbedo, aiTextureType_BASE_COLOR, "albedo", folder);
+    if (!LoadColorMap(scene->mMaterials[i], material.mColorMapRoughness, aiTextureType_DIFFUSE_ROUGHNESS, "roughness", folder))
+    {
+      LoadColorMap(scene->mMaterials[i], material.mColorMapRoughness, aiTextureType_SHININESS, "roughness (from shininess)", folder);
+    }
+    LoadColorMap(scene->mMaterials[i], material.mColorMapMetallic, aiTextureType_METALNESS, "metallic", folder);
+    LoadColorMap(scene->mMaterials[i], material.mColorMapAO, aiTextureType_AMBIENT_OCCLUSION, "AO", folder);
+    LoadColorMap(scene->mMaterials[i], material.mColorMapAmbient, aiTextureType_AMBIENT, "ambient", folder);
+    LoadColorMap(scene->mMaterials[i], material.mColorMapEmissive, aiTextureType_EMISSIVE, "emissive", folder);
+
+    float f = 0.0f;
+
+    material.mSpecularShininess = 1.0f;
+    if (aiGetMaterialFloat(scene->mMaterials[i], AI_MATKEY_SHININESS, &f) == AI_SUCCESS)
+    {
+      material.mSpecularShininess = f;
+    }
+
+    mMaterials.insert({ i, material });
+  }
+
   printf( "[geometry] Loading %d meshes\n", scene->mNumMeshes );
   for ( unsigned int i = 0; i < scene->mNumMeshes; i++ )
   {
@@ -343,7 +389,11 @@ bool Geometry::LoadMesh( const char * _path )
 
     mesh.mMaterialIndex = sceneMesh->mMaterialIndex;
 
-    mMeshes.insert( { i, mesh } );
+    // By importing materials before meshes we can investigate whether a mesh is transparent and flag it as such.
+    const Geometry::Material& mtl = mMaterials[mesh.mMaterialIndex];
+    mesh.mTransparent = (mtl.mColorMapAlbedo.mTexture != nullptr) ? (mtl.mColorMapAlbedo.mTexture->mTransparent) : (mtl.mColorMapAlbedo.mColor.a != 1.0f);
+
+    mMeshes.insert({ i, mesh });
   }
 
   printf( "[geometry] Calculating AABB\n" );
@@ -370,52 +420,6 @@ bool Geometry::LoadMesh( const char * _path )
     }
   }
   printf( "[geometry] Calculated AABB: (%.3f, %.3f, %.3f), (%.3f, %.3f, %.3f)\n", mAABBMin.x, mAABBMin.y, mAABBMin.z, mAABBMax.x, mAABBMax.y, mAABBMax.z );
-
-  printf( "[geometry] Loading %d materials\n", scene->mNumMaterials );
-  for ( unsigned int i = 0; i < scene->mNumMaterials; i++ )
-  {
-    Material material;
-
-    aiString str = scene->mMaterials[ i ]->GetName();
-    material.mName = std::string( str.data, str.length );
-    printf( "[geometry] Loading material #%d: '%s'\n", i + 1, material.mName.c_str() );
-
-    material.mColorMapDiffuse.mColor = glm::vec4( 0.5f );
-    material.mColorMapNormals.mColor = glm::vec4( 0.0f );
-    material.mColorMapSpecular.mColor = glm::vec4( 0.0f );
-    material.mColorMapAlbedo.mColor = glm::vec4( 0.5f );
-    material.mColorMapRoughness.mColor = glm::vec4( 1.0f );
-    material.mColorMapMetallic.mColor = glm::vec4( 0.0f );
-    material.mColorMapAO.mColor = glm::vec4( 1.0f );
-    material.mColorMapAmbient.mColor = glm::vec4( 1.0f );
-    material.mColorMapEmissive.mColor = glm::vec4( 0.0f );
-
-    LoadColorMap( scene->mMaterials[ i ], material.mColorMapDiffuse, aiTextureType_DIFFUSE, "diffuse", folder, true );
-    if ( !LoadColorMap( scene->mMaterials[ i ], material.mColorMapNormals, aiTextureType_NORMAL_CAMERA, "normals", folder ) )
-    {
-      LoadColorMap( scene->mMaterials[ i ], material.mColorMapNormals, aiTextureType_NORMALS, "normals", folder );
-    }
-    LoadColorMap( scene->mMaterials[ i ], material.mColorMapSpecular, aiTextureType_SPECULAR, "specular", folder );
-    LoadColorMap( scene->mMaterials[ i ], material.mColorMapAlbedo, aiTextureType_BASE_COLOR, "albedo", folder );
-    if ( !LoadColorMap( scene->mMaterials[ i ], material.mColorMapRoughness, aiTextureType_DIFFUSE_ROUGHNESS, "roughness", folder ) )
-    {
-      LoadColorMap( scene->mMaterials[ i ], material.mColorMapRoughness, aiTextureType_SHININESS, "roughness (from shininess)", folder );
-    }
-    LoadColorMap( scene->mMaterials[ i ], material.mColorMapMetallic, aiTextureType_METALNESS, "metallic", folder );
-    LoadColorMap( scene->mMaterials[ i ], material.mColorMapAO, aiTextureType_AMBIENT_OCCLUSION, "AO", folder );
-    LoadColorMap( scene->mMaterials[ i ], material.mColorMapAmbient, aiTextureType_AMBIENT, "ambient", folder );
-    LoadColorMap( scene->mMaterials[ i ], material.mColorMapEmissive, aiTextureType_EMISSIVE, "emissive", folder );
-
-    float f = 0.0f;
-
-    material.mSpecularShininess = 1.0f;
-    if ( aiGetMaterialFloat( scene->mMaterials[ i ], AI_MATKEY_SHININESS, &f ) == AI_SUCCESS )
-    {
-      material.mSpecularShininess = f;
-    }
-
-    mMaterials.insert( { i, material } );
-  }
 
   mGlobalAmbient = glm::vec4( 0.3f );
   for ( unsigned int i = 0; i < scene->mNumLights; i++ )
@@ -499,32 +503,51 @@ void Geometry::Render( const glm::mat4x4 & _worldRootMatrix, Renderer::Shader * 
   Renderer::SetShader( _shader );
 
   _shader->SetConstant( "global_ambient", mGlobalAmbient );
-  for ( std::map<int, Geometry::Node>::iterator it = mNodes.begin(); it != mNodes.end(); it++ )
+  
+  // TODO: Maybe we can cache the world matrices & 2 queues for opaque and transparant in LoadMesh
+  // but that depends if we want to add animation support (in which case we can't).
+  for(int j = 0; j < 2; ++j) // loop twice, first opaque, then transparent
   {
-    const Geometry::Node & node = it->second;
-
-    _shader->SetConstant( "mat_world", mMatrices[ node.mID ] * _worldRootMatrix );
-
-    for ( int i = 0; i < it->second.mMeshes.size(); i++ )
+    bool bTransparentPass = (bool)j;
+    if(bTransparentPass) {
+      glEnable( GL_BLEND );
+      glBlendFunc( GL_ONE, GL_ONE_MINUS_SRC_ALPHA );
+      glDepthMask( GL_FALSE);
+    }
+    for ( std::map<int, Geometry::Node>::iterator it = mNodes.begin(); it != mNodes.end(); it++ )
     {
-      const Geometry::Mesh & mesh = mMeshes[ it->second.mMeshes[ i ] ];
-      const Geometry::Material & material = mMaterials[ mesh.mMaterialIndex ];
-
-      _shader->SetConstant( "specular_shininess", material.mSpecularShininess );
-
-      SetColorMap( _shader, "map_diffuse", material.mColorMapDiffuse );
-      SetColorMap( _shader, "map_normals", material.mColorMapNormals );
-      SetColorMap( _shader, "map_specular", material.mColorMapSpecular );
-      SetColorMap( _shader, "map_albedo", material.mColorMapAlbedo );
-      SetColorMap( _shader, "map_roughness", material.mColorMapRoughness );
-      SetColorMap( _shader, "map_metallic", material.mColorMapMetallic );
-      SetColorMap( _shader, "map_ao", material.mColorMapAO );
-      SetColorMap( _shader, "map_ambient", material.mColorMapAmbient );
-      SetColorMap( _shader, "map_emissive", material.mColorMapEmissive );
-
-      glBindVertexArray( mesh.mVertexArrayObject );
-
-      glDrawElements( GL_TRIANGLES, mesh.mTriangleCount * 3, GL_UNSIGNED_INT, NULL );
+      const Geometry::Node & node = it->second;
+    
+      _shader->SetConstant( "mat_world", mMatrices[ node.mID ] * _worldRootMatrix );
+    
+      for ( int i = 0; i < it->second.mMeshes.size(); i++ )
+      {
+        const Geometry::Mesh & mesh = mMeshes[ it->second.mMeshes[ i ] ];
+        // Postpone rendering transparent meshes
+        if(mesh.mTransparent != bTransparentPass)
+          continue;
+        const Geometry::Material & material = mMaterials[ mesh.mMaterialIndex ];
+    
+        _shader->SetConstant( "specular_shininess", material.mSpecularShininess );
+    
+        SetColorMap( _shader, "map_diffuse", material.mColorMapDiffuse );
+        SetColorMap( _shader, "map_normals", material.mColorMapNormals );
+        SetColorMap( _shader, "map_specular", material.mColorMapSpecular );
+        SetColorMap( _shader, "map_albedo", material.mColorMapAlbedo );
+        SetColorMap( _shader, "map_roughness", material.mColorMapRoughness );
+        SetColorMap( _shader, "map_metallic", material.mColorMapMetallic );
+        SetColorMap( _shader, "map_ao", material.mColorMapAO );
+        SetColorMap( _shader, "map_ambient", material.mColorMapAmbient );
+        SetColorMap( _shader, "map_emissive", material.mColorMapEmissive );
+    
+        glBindVertexArray( mesh.mVertexArrayObject );
+    
+        glDrawElements( GL_TRIANGLES, mesh.mTriangleCount * 3, GL_UNSIGNED_INT, NULL );
+      }
+    }
+    if (bTransparentPass) {
+      glDisable( GL_BLEND );
+      glDepthMask( GL_TRUE );
     }
   }
 }
