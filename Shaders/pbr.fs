@@ -136,6 +136,15 @@ vec2 sphere_to_polar( vec3 normal )
   return vec2( ( atan( normal.z, normal.x ) + skysphere_rotation ) / PI / 2.0 + 0.5, acos( normal.y ) / PI );
 }
 
+// Our vertically GL_CLAMPed textures seem to blend towards black when sampling the half-pixel edge.
+// Not sure if it has a border, or this if is a driver bug, but can repro on multiple nvidia cards.
+// Knowing the texture height we can limit sampling to the centers of the top and bottom pixel rows.
+vec2 sphere_to_polar_clamp_y( vec3 normal, float texture_height )
+{
+  normal = normalize( normal );
+  return vec2( ( atan( normal.z, normal.x ) + skysphere_rotation ) / PI / 2.0 + 0.5, clamp(acos( normal.y ) / PI, 0.5 / texture_height, 1.0 - 0.5 / texture_height) );
+}
+
 vec3 sample_sky( vec3 normal )
 {
   vec2 polar = sphere_to_polar( normal );
@@ -182,10 +191,12 @@ vec3 sample_irradiance_fast( vec3 normal, vec3 vertex_tangent )
   // Sample the irradiance map if it exists, otherwise fall back to blurred reflection map.
   if ( has_tex_skyenv )
   {
-    vec2 polar = sphere_to_polar( normal );
+    vec2 polar = sphere_to_polar_clamp_y( normal );
     // HACK: Sample a smaller mip here to avoid high frequency color variations on detailed normal
     //       mapped areas.
-    float miplevel = 5.5; // tweaked for a 360x180 irradiance texture
+    // float miplevel = 5.5; // tweaked for a 360x180 irradiance texture
+	// ^ unhacked because the mip higher levels cause really weird shading around poles, try a diffuse sphere to see what I mean!
+	float miplevel = 0.0;
     return textureLod( tex_skyenv, polar, miplevel ).rgb * exposure;
   }
   else
