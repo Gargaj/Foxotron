@@ -110,7 +110,8 @@ bool LoadColorMap( aiMaterial * _material, Geometry::ColorMap & _colorMap, aiTex
   }
 
   aiColor4D color;
-  aiReturn result = AI_FAILURE;
+  aiColor4D translucentColor;
+  aiReturn result = AI_FAILURE, result2 = AI_FAILURE;
   switch ( _semantic )
   {
     case aiTextureType_AMBIENT:
@@ -119,9 +120,15 @@ bool LoadColorMap( aiMaterial * _material, Geometry::ColorMap & _colorMap, aiTex
     case aiTextureType_DIFFUSE:
     case aiTextureType_BASE_COLOR:
       result = aiGetMaterialColor( _material, AI_MATKEY_COLOR_DIFFUSE, &color );
+      result2 = aiGetMaterialColor(_material, AI_MATKEY_COLOR_TRANSPARENT, &translucentColor);
+      if (result2 == AI_SUCCESS)
+        color.a = (1.0 - translucentColor.r);
       break;
     case aiTextureType_SPECULAR:
       result = aiGetMaterialColor( _material, AI_MATKEY_COLOR_SPECULAR, &color );
+      break;
+    case aiTextureType_EMISSIVE:
+      result = aiGetMaterialColor(_material, AI_MATKEY_COLOR_EMISSIVE, &color);
       break;
   };
   if ( result == AI_SUCCESS )
