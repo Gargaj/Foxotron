@@ -191,7 +191,7 @@ vec3 sample_irradiance_fast( vec3 normal, vec3 vertex_tangent )
   // Sample the irradiance map if it exists, otherwise fall back to blurred reflection map.
   if ( has_tex_skyenv )
   {
-    vec2 polar = sphere_to_polar_clamp_y( normal );
+    vec2 polar = sphere_to_polar_clamp_y( normal, 180.0 );
     // HACK: Sample a smaller mip here to avoid high frequency color variations on detailed normal
     //       mapped areas.
     // float miplevel = 5.5; // tweaked for a 360x180 irradiance texture
@@ -261,7 +261,7 @@ void main(void)
   float ao = 1.0;
   float alpha = 1.0;
 
-  vec4 baseColor_Alpha;
+  vec4 baseColor_alpha;
   if ( map_albedo.has_tex )
     baseColor_alpha = sample_colormap( map_albedo, out_texcoord );
   else
