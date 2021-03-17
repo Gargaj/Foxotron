@@ -64,7 +64,7 @@ Renderer::Texture * LoadTexture( const char * _type, const aiString & _path, con
 
   printf( "[geometry] Loading %s texture: '%s'\n", _type, filename.c_str() );
 
-  Renderer::Texture * texture = Renderer::CreateRGBA8TextureFromFile( filename.c_str() );
+  Renderer::Texture * texture = Renderer::CreateRGBA8TextureFromFile( filename.c_str(), _loadAsSRGB );
   if ( texture )
   {
     return texture;
