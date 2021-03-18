@@ -126,5 +126,5 @@ void main(void)
 
   color += sample_colormap( map_emissive, out_texcoord ).rgb;
 
-  frag_color = vec4( pow( color * exposure, vec3(1. / 2.2) ), alpha.w );
+  frag_color = vec4( pow( color * exposure, vec3(1. / 2.2) ), alpha );
 }
