@@ -341,7 +341,7 @@ void main(void)
       kD *= 1.0 - metallic;
 
 	  // Premultiplied alpha applied to the diffuse component only
-	  kD *= alpha
+	  kD *= alpha;
 
       float D = distribution_ggx( N, H, roughness );
       float G = geometry_smith( N, V, L, roughness );
@@ -393,7 +393,7 @@ void main(void)
     kD *= 1.0 - metallic;
 
     // Premultiplied alpha applied to the diffuse component only
-    kD *= alpha
+    kD *= alpha;
 
     // Modulate the incoming lighting with the diffuse color: some wavelengths get absorbed.
     diffuse_ambient = irradiance * baseColor;
