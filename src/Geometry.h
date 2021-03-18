@@ -32,6 +32,8 @@ public:
 
     glm::vec3 mAABBMin;
     glm::vec3 mAABBMax;
+
+    bool mTransparent;
   };
   struct ColorMap
   {

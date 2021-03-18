@@ -136,6 +136,15 @@ vec2 sphere_to_polar( vec3 normal )
   return vec2( ( atan( normal.z, normal.x ) + skysphere_rotation ) / PI / 2.0 + 0.5, acos( normal.y ) / PI );
 }
 
+// Our vertically GL_CLAMPed textures seem to blend towards black when sampling the half-pixel edge.
+// Not sure if it has a border, or this if is a driver bug, but can repro on multiple nvidia cards.
+// Knowing the texture height we can limit sampling to the centers of the top and bottom pixel rows.
+vec2 sphere_to_polar_clamp_y( vec3 normal, float texture_height )
+{
+  normal = normalize( normal );
+  return vec2( ( atan( normal.z, normal.x ) + skysphere_rotation ) / PI / 2.0 + 0.5, clamp(acos( normal.y ) / PI, 0.5 / texture_height, 1.0 - 0.5 / texture_height) );
+}
+
 vec3 sample_sky( vec3 normal )
 {
   vec2 polar = sphere_to_polar( normal );
@@ -182,11 +191,8 @@ vec3 sample_irradiance_fast( vec3 normal, vec3 vertex_tangent )
   // Sample the irradiance map if it exists, otherwise fall back to blurred reflection map.
   if ( has_tex_skyenv )
   {
-    vec2 polar = sphere_to_polar( normal );
-    // HACK: Sample a smaller mip here to avoid high frequency color variations on detailed normal
-    //       mapped areas.
-    float miplevel = 5.5; // tweaked for a 360x180 irradiance texture
-    return textureLod( tex_skyenv, polar, miplevel ).rgb * exposure;
+    vec2 polar = sphere_to_polar_clamp_y( normal, 180.0 );
+    return textureLod( tex_skyenv, polar, 0.0 ).rgb * exposure;
   }
   else
   {
@@ -248,11 +254,15 @@ void main(void)
   float roughness = 1.0;
   float metallic = 0.0;
   float ao = 1.0;
+  float alpha = 1.0;
 
+  vec4 baseColor_alpha;
   if ( map_albedo.has_tex )
-    baseColor = sample_colormap( map_albedo, out_texcoord ).xyz;
+    baseColor_alpha = sample_colormap( map_albedo, out_texcoord );
   else
-    baseColor = sample_colormap( map_diffuse, out_texcoord ).xyz;
+    baseColor_alpha = sample_colormap( map_diffuse, out_texcoord );
+  baseColor = baseColor_alpha.xyz;
+  alpha = baseColor_alpha.w;
 
   roughness = sample_colormap( map_roughness, out_texcoord ).x;
   metallic = sample_colormap( map_metallic, out_texcoord ).x;
@@ -330,6 +340,9 @@ void main(void)
       vec3 kD = vec3(1.0) - kS;
       kD *= 1.0 - metallic;
 
+	  // Premultiplied alpha applied to the diffuse component only
+	  kD *= alpha;
+
       float D = distribution_ggx( N, H, roughness );
       float G = geometry_smith( N, V, L, roughness );
 
@@ -379,6 +392,9 @@ void main(void)
     // Metallic surfaces have only a specular reflection.
     kD *= 1.0 - metallic;
 
+    // Premultiplied alpha applied to the diffuse component only
+    kD *= alpha;
+
     // Modulate the incoming lighting with the diffuse color: some wavelengths get absorbed.
     diffuse_ambient = irradiance * baseColor;
 
@@ -398,7 +414,7 @@ void main(void)
     }
   }
 
-  vec3 color = ambient + Lo + emissive;
+  vec3 color = (ambient + Lo) + emissive;
 
   if ( use_ambient_debugging )
   {
@@ -415,5 +431,7 @@ void main(void)
   color = pow( color, vec3(1. / 2.2) );
   float dither = random( uvec3( floatBitsToUint( gl_FragCoord.xy ), frame_count ) );
   color += vec3( (-1.0/256.) + (2./256.) * dither );
-  frag_color = vec4( color, 1.0 );
+  
+  // Technically this alpha may be too transparent, if there is a lot of reflected light we wouldn't see the background, maybe we can approximate it well enough by adding a fresnel term
+  frag_color = vec4( color, alpha );
 }

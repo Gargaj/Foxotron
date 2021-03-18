@@ -36,6 +36,7 @@ struct Texture
   std::string mFilename;
   unsigned int mGLTextureID;
   int mGLTextureUnit;
+  bool mTransparent;
 };
 
 struct Shader
