@@ -362,7 +362,7 @@ Texture * CreateRGBA8TextureFromFile( const char * szFilename, const bool _loadA
     data = stbi_loadf( szFilename, &width, &height, &comp, STBI_rgb_alpha );
     if (!data) return NULL;
     float* bytes = (float*)data;
-    for (int i = 3; i < width * height * 4; ++i)
+    for (int i = 3; i < width * height * 4; i += 4)
     {
       if (bytes[i] != 1.0f)
       {
@@ -376,7 +376,7 @@ Texture * CreateRGBA8TextureFromFile( const char * szFilename, const bool _loadA
     data = stbi_load( szFilename, &width, &height, &comp, STBI_rgb_alpha );
     if (!data) return NULL;
     unsigned char* bytes = (unsigned char*)data;
-    for(int i = 3 ; i < width * height * 4; ++i)
+    for(int i = 3 ; i < width * height * 4; i += 4)
     {
       if (bytes[i] != 0xFF)
       {
