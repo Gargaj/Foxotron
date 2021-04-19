@@ -814,8 +814,10 @@ int main( int argc, const char * argv[] )
     //////////////////////////////////////////////////////////////////////////
     // Mesh render
 
-    float verticalFovInRadian = 0.5f;
-    projectionMatrix = glm::perspective( verticalFovInRadian, settings.mWidth / (float) settings.mHeight, gCameraDistance / 1000.0f, gCameraDistance * 2.0f );
+    const float verticalFovInRadian = 0.5f;
+    const float nearPlane = std::max( gModel.mModelDiagonal / 10000.0f, gCameraDistance / 1000.0f );
+    const float farPlane = std::max( gModel.mModelDiagonal, gCameraDistance + gModel.mModelDiagonal );
+    projectionMatrix = glm::perspective( verticalFovInRadian, settings.mWidth / (float) settings.mHeight, nearPlane, farPlane );
     gCurrentShader->SetConstant( "mat_projection", projectionMatrix );
 
     cameraPosition *= gCameraDistance;

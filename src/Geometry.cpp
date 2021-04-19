@@ -177,6 +177,7 @@ Geometry::Geometry()
   : mMatrices( NULL )
   , mAABBMin( 0.0f )
   , mAABBMax( 0.0f )
+  , mModelDiagonal( 0.0f )
 {
 }
 
@@ -420,6 +421,8 @@ bool Geometry::LoadMesh( const char * _path )
     }
   }
   printf( "[geometry] Calculated AABB: (%.3f, %.3f, %.3f), (%.3f, %.3f, %.3f)\n", mAABBMin.x, mAABBMin.y, mAABBMin.z, mAABBMax.x, mAABBMax.y, mAABBMax.z );
+
+  mModelDiagonal = glm::length( mAABBMax - mAABBMin );
 
   mGlobalAmbient = glm::vec4( 0.3f );
   for ( unsigned int i = 0; i < scene->mNumLights; i++ )
