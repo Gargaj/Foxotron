@@ -69,7 +69,6 @@ public:
 
             //if ((d.dmPelsWidth * 9) / 16 != d.dmPelsHeight) continue;
             if ( d.dmBitsPerPel != 32 ) continue;
-            if ( d.dmDisplayOrientation != DMDO_DEFAULT ) continue;
 
             if ( !mResolutions.size()
               || mResolutions[ mResolutions.size() - 1 ].mWidth != d.dmPelsWidth
