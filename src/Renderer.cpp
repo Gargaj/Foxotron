@@ -408,6 +408,73 @@ Texture * CreateRGBA8TextureFromFile( const char * szFilename, const bool _loadA
   tex->mGLTextureID = glTexId;
   tex->mGLTextureUnit = textureUnit++;
   tex->mTransparent = hasTransparentPixels;
+  tex->mRefCount = 1;
+  return tex;
+}
+
+Texture * CreateRGBA8TextureFromMemory( const unsigned char * pMemory, unsigned int nMemorySize, const bool _loadAsSRGB /*= false */ )
+{
+  int comp = 0;
+  int width = 0;
+  int height = 0;
+  void * data = NULL;
+  GLenum internalFormat = _loadAsSRGB ? GL_SRGB8_ALPHA8 : GL_RGBA8;
+  GLenum srcFormat = GL_RGBA;
+  GLenum format = GL_UNSIGNED_BYTE;
+  bool hasTransparentPixels = false;
+  if ( stbi_is_hdr_from_memory( pMemory, nMemorySize ) )
+  {
+    internalFormat = GL_RGBA32F;
+    format = GL_FLOAT;
+    data = stbi_loadf_from_memory( pMemory, nMemorySize, &width, &height, &comp, STBI_rgb_alpha );
+    if ( !data ) return NULL;
+    float * bytes = (float *) data;
+    for ( int i = 3; i < width * height * 4; i += 4 )
+    {
+      if ( bytes[ i ] != 1.0f )
+      {
+        hasTransparentPixels = true;
+        break;
+      }
+    }
+  }
+  else
+  {
+    data = stbi_load_from_memory( pMemory, nMemorySize, &width, &height, &comp, STBI_rgb_alpha );
+    if ( !data ) return NULL;
+    unsigned char * bytes = (unsigned char *) data;
+    for ( int i = 3; i < width * height * 4; i += 4 )
+    {
+      if ( bytes[ i ] != 0xFF )
+      {
+        hasTransparentPixels = true;
+        break;
+      }
+    }
+  }
+
+  GLuint glTexId = 0;
+  glGenTextures( 1, &glTexId );
+  glBindTexture( GL_TEXTURE_2D, glTexId );
+
+  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
+  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
+  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR );
+
+  glTexImage2D( GL_TEXTURE_2D, 0, internalFormat, width, height, 0, srcFormat, format, data );
+  glGenerateMipmap( GL_TEXTURE_2D );
+
+  stbi_image_free( data );
+
+  Texture * tex = new Texture();
+  tex->mWidth = width;
+  tex->mHeight = height;
+  tex->mType = TEXTURETYPE_2D;
+  tex->mGLTextureID = glTexId;
+  tex->mGLTextureUnit = textureUnit++;
+  tex->mTransparent = hasTransparentPixels;
+  tex->mRefCount = 1;
   return tex;
 }
 
@@ -456,12 +523,19 @@ Texture * CreateRG32FTextureFromRawFile( const char * szFilename, int width, int
   tex->mFilename = szFilename;
   tex->mGLTextureID = glTexId;
   tex->mGLTextureUnit = textureUnit++;
+  tex->mRefCount = 1;
   return tex;
 }
 
-void ReleaseTexture( Texture * tex )
+void ReleaseTexture( Texture *& tex )
 {
-  glDeleteTextures( 1, &( (Texture *) tex )->mGLTextureID );
+  tex->mRefCount--;
+  if ( tex->mRefCount == 0 )
+  {
+    glDeleteTextures( 1, &( (Texture *) tex )->mGLTextureID );
+    delete tex;
+    tex = NULL;
+  }
 }
 
 void SetShader( Shader * _shader )

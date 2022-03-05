@@ -76,6 +76,7 @@ public:
   std::map<int, Node> mNodes;
   std::map<int, Mesh> mMeshes;
   std::map<int, Material> mMaterials;
+  std::vector<Renderer::Texture *> mEmbeddedTextures;
   glm::mat4x4 * mMatrices;
   glm::vec3 mAABBMin;
   glm::vec3 mAABBMax;

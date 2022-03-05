@@ -37,6 +37,7 @@ struct Texture
   unsigned int mGLTextureID;
   int mGLTextureUnit;
   bool mTransparent;
+  int mRefCount;
 };
 
 struct Shader
@@ -76,8 +77,9 @@ void ReleaseShader( Shader * _shader );
 void Close();
 
 Texture * CreateRGBA8TextureFromFile( const char * szFilename, const bool _loadAsSRGB = false );
+Texture * CreateRGBA8TextureFromMemory( const unsigned char * pMemory, unsigned int nMemorySize, const bool _loadAsSRGB = false );
 Texture * CreateRG32FTextureFromRawFile( const char* szFilename, int width, int height );
-void ReleaseTexture( Texture * tex );
+void ReleaseTexture( Texture *& tex );
 
 void SetShader( Shader * _shader );
 

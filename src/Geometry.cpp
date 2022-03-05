@@ -49,9 +49,20 @@ void TransformBoundingBox( const glm::vec3 & inMin, const glm::vec3 & inMax, con
   outMax = glm::max( xa, xb ) + glm::max( ya, yb ) + glm::max( za, zb ) + glm::vec3( m[ 4 - 1 ][ 1 - 1 ], m[ 4 - 1 ][ 2 - 1 ], m[ 4 - 1 ][ 3 - 1 ] );
 }
 
-Renderer::Texture * LoadTexture( const char * _type, const aiString & _path, const std::string & _folder, const bool _loadAsSRGB = false )
+Renderer::Texture * LoadTexture( Geometry * _geometry, const char * _type, const aiString & _path, const std::string & _folder, const bool _loadAsSRGB = false )
 {
   std::string filename( _path.data, _path.length );
+
+  if ( filename[ 0 ] == '*' )
+  {
+    int index = 0;
+    sscanf( filename.c_str(), "*%d", &index );
+
+    printf( "[geometry] Using embedded texture %d: '%s'\n", index, filename.c_str() );
+
+    _geometry->mEmbeddedTextures[ index ]->mRefCount++;
+    return _geometry->mEmbeddedTextures[ index ];
+  }
 
   if ( filename.find( '\\' ) != -1 )
   {
@@ -70,15 +81,15 @@ Renderer::Texture * LoadTexture( const char * _type, const aiString & _path, con
     return texture;
   }
 
-  filename = _folder + filename;
+  std::string filenameWithPath = _folder + filename;
 
-  texture = Renderer::CreateRGBA8TextureFromFile( filename.c_str(), _loadAsSRGB );
+  texture = Renderer::CreateRGBA8TextureFromFile( filenameWithPath.c_str(), _loadAsSRGB );
   if ( texture )
   {
     return texture;
   }
 
-  std::string extless = filename.substr( 0, filename.find_last_of( '.' ) );
+  std::string extless = filenameWithPath.substr( 0, filenameWithPath.find_last_of( '.' ) );
 
   const char * extensions[] = { ".hdr", ".png", ".tga", ".jpg", ".jpeg", ".bmp", NULL };
   for ( int i = 0; extensions[ i ]; i++ )
@@ -92,11 +103,22 @@ Renderer::Texture * LoadTexture( const char * _type, const aiString & _path, con
     }
   }
 
+  for ( int i = 0; _geometry->mEmbeddedTextures.size(); i++ )
+  {
+    if ( filename == _geometry->mEmbeddedTextures[ i ]->mFilename )
+    {
+      printf( "[geometry] Using embedded texture: '%s'\n", filename.c_str() );
+
+      _geometry->mEmbeddedTextures[ i ]->mRefCount++;
+      return _geometry->mEmbeddedTextures[ i ];
+    }
+  }
+
   printf( "[geometry] WARNING: Texture loading (%s) failed: '%s'\n", _type, filename.c_str() );
   return NULL;
 }
 
-bool LoadColorMap( aiMaterial * _material, Geometry::ColorMap & _colorMap, aiTextureType _semantic, const char * _semanticText, const std::string & _folder, bool _loadAsSRGB = false )
+bool LoadColorMap( Geometry * _geometry, aiMaterial * _material, Geometry::ColorMap & _colorMap, aiTextureType _semantic, const char * _semanticText, const std::string & _folder, bool _loadAsSRGB = false )
 {
   bool success = false;
   _colorMap.mTexture = NULL;
@@ -104,7 +126,7 @@ bool LoadColorMap( aiMaterial * _material, Geometry::ColorMap & _colorMap, aiTex
   aiString str;
   if ( aiGetMaterialString( _material, AI_MATKEY_TEXTURE( _semantic, 0 ), &str ) == AI_SUCCESS )
   {
-    _colorMap.mTexture = LoadTexture( _semanticText, str, _folder, _loadAsSRGB );
+    _colorMap.mTexture = LoadTexture( _geometry, _semanticText, str, _folder, _loadAsSRGB );
     _colorMap.mValid = true;
     success = true;
   }
@@ -119,10 +141,10 @@ bool LoadColorMap( aiMaterial * _material, Geometry::ColorMap & _colorMap, aiTex
       break;
     case aiTextureType_DIFFUSE:
     case aiTextureType_BASE_COLOR:
-       result = aiGetMaterialColor( _material, AI_MATKEY_COLOR_DIFFUSE, &color );
+      result = aiGetMaterialColor( _material, AI_MATKEY_COLOR_DIFFUSE, &color );
       result2 = aiGetMaterialColor( _material, AI_MATKEY_COLOR_TRANSPARENT, &translucentColor );
-      if (result2 == AI_SUCCESS)
-        color.a = (1.0 - translucentColor.r);
+      if ( result2 == AI_SUCCESS )
+        color.a = ( 1.0 - translucentColor.r );
       break;
     case aiTextureType_SPECULAR:
       result = aiGetMaterialColor( _material, AI_MATKEY_COLOR_SPECULAR, &color );
@@ -231,6 +253,23 @@ bool Geometry::LoadMesh( const char * _path )
   mMatrices = mNodes.size() ? new glm::mat4x4[ mNodes.size() ] : nullptr;
 
   //////////////////////////////////////////////////////////////////////////
+  // Load embedded textures, if any
+  for ( unsigned int i = 0; i < scene->mNumTextures; i++ )
+  {
+    if ( scene->mTextures[ i ]->mHeight == 0 )
+    {
+      // Data is packed format
+      Renderer::Texture * texture = Renderer::CreateRGBA8TextureFromMemory( (unsigned char *) scene->mTextures[ i ]->pcData, scene->mTextures[ i ]->mWidth, true ); // TODO: currently forced to sRGB (problematic)
+      texture->mFilename = scene->mTextures[ i ]->mFilename.C_Str();
+      mEmbeddedTextures.push_back( texture );
+    }
+    else
+    {
+      mEmbeddedTextures.push_back( NULL ); // Not supported yet
+    }
+  }
+
+  //////////////////////////////////////////////////////////////////////////
   // Calculate node transforms
   if ( mMatrices )
   {
@@ -252,50 +291,50 @@ bool Geometry::LoadMesh( const char * _path )
     }
   }
 
-  printf("[geometry] Loading %d materials\n", scene->mNumMaterials);
-  for (unsigned int i = 0; i < scene->mNumMaterials; i++)
+  printf( "[geometry] Loading %d materials\n", scene->mNumMaterials );
+  for ( unsigned int i = 0; i < scene->mNumMaterials; i++ )
   {
     Material material;
 
-    aiString str = scene->mMaterials[i]->GetName();
-    material.mName = std::string(str.data, str.length);
-    printf("[geometry] Loading material #%d: '%s'\n", i + 1, material.mName.c_str());
+    aiString str = scene->mMaterials[ i ]->GetName();
+    material.mName = std::string( str.data, str.length );
+    printf( "[geometry] Loading material #%d: '%s'\n", i + 1, material.mName.c_str() );
 
-    material.mColorMapDiffuse.mColor = glm::vec4(0.5f);
-    material.mColorMapNormals.mColor = glm::vec4(0.0f);
-    material.mColorMapSpecular.mColor = glm::vec4(0.0f);
-    material.mColorMapAlbedo.mColor = glm::vec4(0.5f);
-    material.mColorMapRoughness.mColor = glm::vec4(1.0f);
-    material.mColorMapMetallic.mColor = glm::vec4(0.0f);
-    material.mColorMapAO.mColor = glm::vec4(1.0f);
-    material.mColorMapAmbient.mColor = glm::vec4(1.0f);
-    material.mColorMapEmissive.mColor = glm::vec4(0.0f);
+    material.mColorMapDiffuse.mColor = glm::vec4( 0.5f );
+    material.mColorMapNormals.mColor = glm::vec4( 0.0f );
+    material.mColorMapSpecular.mColor = glm::vec4( 0.0f );
+    material.mColorMapAlbedo.mColor = glm::vec4( 0.5f );
+    material.mColorMapRoughness.mColor = glm::vec4( 1.0f );
+    material.mColorMapMetallic.mColor = glm::vec4( 0.0f );
+    material.mColorMapAO.mColor = glm::vec4( 1.0f );
+    material.mColorMapAmbient.mColor = glm::vec4( 1.0f );
+    material.mColorMapEmissive.mColor = glm::vec4( 0.0f );
 
-    LoadColorMap(scene->mMaterials[i], material.mColorMapDiffuse, aiTextureType_DIFFUSE, "diffuse", folder, true);
-    if (!LoadColorMap(scene->mMaterials[i], material.mColorMapNormals, aiTextureType_NORMAL_CAMERA, "normals", folder))
+    LoadColorMap( this, scene->mMaterials[ i ], material.mColorMapDiffuse, aiTextureType_DIFFUSE, "diffuse", folder, true );
+    if ( !LoadColorMap( this, scene->mMaterials[ i ], material.mColorMapNormals, aiTextureType_NORMAL_CAMERA, "normals", folder ) )
     {
-      LoadColorMap(scene->mMaterials[i], material.mColorMapNormals, aiTextureType_NORMALS, "normals", folder);
+      LoadColorMap( this, scene->mMaterials[ i ], material.mColorMapNormals, aiTextureType_NORMALS, "normals", folder );
     }
-    LoadColorMap(scene->mMaterials[i], material.mColorMapSpecular, aiTextureType_SPECULAR, "specular", folder);
-    LoadColorMap(scene->mMaterials[i], material.mColorMapAlbedo, aiTextureType_BASE_COLOR, "albedo", folder);
-    if (!LoadColorMap(scene->mMaterials[i], material.mColorMapRoughness, aiTextureType_DIFFUSE_ROUGHNESS, "roughness", folder))
+    LoadColorMap( this, scene->mMaterials[ i ], material.mColorMapAlbedo, aiTextureType_BASE_COLOR, "albedo", folder );
+    LoadColorMap( this, scene->mMaterials[ i ], material.mColorMapSpecular, aiTextureType_SPECULAR, "specular", folder );
+    if ( !LoadColorMap( this, scene->mMaterials[ i ], material.mColorMapRoughness, aiTextureType_DIFFUSE_ROUGHNESS, "roughness", folder ) )
     {
-      LoadColorMap(scene->mMaterials[i], material.mColorMapRoughness, aiTextureType_SHININESS, "roughness (from shininess)", folder);
+      LoadColorMap( this, scene->mMaterials[ i ], material.mColorMapRoughness, aiTextureType_SHININESS, "roughness (from shininess)", folder );
     }
-    LoadColorMap(scene->mMaterials[i], material.mColorMapMetallic, aiTextureType_METALNESS, "metallic", folder);
-    LoadColorMap(scene->mMaterials[i], material.mColorMapAO, aiTextureType_AMBIENT_OCCLUSION, "AO", folder);
-    LoadColorMap(scene->mMaterials[i], material.mColorMapAmbient, aiTextureType_AMBIENT, "ambient", folder);
-    LoadColorMap(scene->mMaterials[i], material.mColorMapEmissive, aiTextureType_EMISSIVE, "emissive", folder);
+    LoadColorMap( this, scene->mMaterials[ i ], material.mColorMapMetallic, aiTextureType_METALNESS, "metallic", folder );
+    LoadColorMap( this, scene->mMaterials[ i ], material.mColorMapAO, aiTextureType_AMBIENT_OCCLUSION, "AO", folder );
+    LoadColorMap( this, scene->mMaterials[ i ], material.mColorMapAmbient, aiTextureType_AMBIENT, "ambient", folder );
+    LoadColorMap( this, scene->mMaterials[ i ], material.mColorMapEmissive, aiTextureType_EMISSIVE, "emissive", folder );
 
     float f = 0.0f;
 
     material.mSpecularShininess = 1.0f;
-    if (aiGetMaterialFloat(scene->mMaterials[i], AI_MATKEY_SHININESS, &f) == AI_SUCCESS)
+    if ( aiGetMaterialFloat( scene->mMaterials[ i ], AI_MATKEY_SHININESS, &f ) == AI_SUCCESS )
     {
       material.mSpecularShininess = f;
     }
 
-    mMaterials.insert({ i, material });
+    mMaterials.insert( { i, material } );
   }
 
   printf( "[geometry] Loading %d meshes\n", scene->mNumMeshes );
@@ -391,10 +430,10 @@ bool Geometry::LoadMesh( const char * _path )
     mesh.mMaterialIndex = sceneMesh->mMaterialIndex;
 
     // By importing materials before meshes we can investigate whether a mesh is transparent and flag it as such.
-    const Geometry::Material& mtl = mMaterials[mesh.mMaterialIndex];
-    mesh.mTransparent = (mtl.mColorMapAlbedo.mTexture != nullptr) ? (mtl.mColorMapAlbedo.mTexture->mTransparent) : (mtl.mColorMapAlbedo.mColor.a != 1.0f);
+    const Geometry::Material & mtl = mMaterials[ mesh.mMaterialIndex ];
+    mesh.mTransparent = ( mtl.mColorMapAlbedo.mTexture != nullptr ) ? ( mtl.mColorMapAlbedo.mTexture->mTransparent ) : ( mtl.mColorMapAlbedo.mColor.a != 1.0f );
 
-    mMeshes.insert({ i, mesh });
+    mMeshes.insert( { i, mesh } );
   }
 
   printf( "[geometry] Calculating AABB\n" );
@@ -453,31 +492,37 @@ void Geometry::UnloadMesh()
 
   mNodes.clear();
 
+  for ( unsigned int i = 0; i < mEmbeddedTextures.size(); i++ )
+  {
+    Renderer::ReleaseTexture( mEmbeddedTextures[ i ] );
+  }
+  mEmbeddedTextures.clear();
+
   for ( std::map<int, Material>::iterator it = mMaterials.begin(); it != mMaterials.end(); it++ )
   {
-    if ( it->second.mColorMapDiffuse.mTexture)
+    if ( it->second.mColorMapDiffuse.mTexture )
     {
-      Renderer::ReleaseTexture( it->second.mColorMapDiffuse.mTexture);
+      Renderer::ReleaseTexture( it->second.mColorMapDiffuse.mTexture );
     }
-    if ( it->second.mColorMapNormals.mTexture)
+    if ( it->second.mColorMapNormals.mTexture )
     {
-      Renderer::ReleaseTexture( it->second.mColorMapNormals.mTexture);
+      Renderer::ReleaseTexture( it->second.mColorMapNormals.mTexture );
     }
-    if ( it->second.mColorMapSpecular.mTexture)
+    if ( it->second.mColorMapSpecular.mTexture )
     {
-      Renderer::ReleaseTexture( it->second.mColorMapSpecular.mTexture);
+      Renderer::ReleaseTexture( it->second.mColorMapSpecular.mTexture );
     }
-    if ( it->second.mColorMapAlbedo.mTexture)
+    if ( it->second.mColorMapAlbedo.mTexture )
     {
-      Renderer::ReleaseTexture( it->second.mColorMapAlbedo.mTexture);
+      Renderer::ReleaseTexture( it->second.mColorMapAlbedo.mTexture );
     }
-    if ( it->second.mColorMapRoughness.mTexture)
+    if ( it->second.mColorMapRoughness.mTexture )
     {
-      Renderer::ReleaseTexture( it->second.mColorMapRoughness.mTexture);
+      Renderer::ReleaseTexture( it->second.mColorMapRoughness.mTexture );
     }
-    if ( it->second.mColorMapMetallic.mTexture)
+    if ( it->second.mColorMapMetallic.mTexture )
     {
-      Renderer::ReleaseTexture( it->second.mColorMapMetallic.mTexture);
+      Renderer::ReleaseTexture( it->second.mColorMapMetallic.mTexture );
     }
     if ( it->second.mColorMapAO.mTexture )
     {
@@ -506,33 +551,36 @@ void Geometry::Render( const glm::mat4x4 & _worldRootMatrix, Renderer::Shader * 
   Renderer::SetShader( _shader );
 
   _shader->SetConstant( "global_ambient", mGlobalAmbient );
-  
-  // TODO: Maybe we can cache the world matrices & 2 queues for opaque and transparant in LoadMesh
+
+  // TODO: Maybe we can cache the world matrices & 2 queues for opaque and transparent in LoadMesh
   // but that depends if we want to add animation support (in which case we can't).
-  for(int j = 0; j < 2; ++j) // loop twice, first opaque, then transparent
+  for ( int j = 0; j < 2; ++j ) // loop twice, first opaque, then transparent
   {
-    bool bTransparentPass = (bool)j;
-    if(bTransparentPass) {
+    bool transparentPass = j > 0;
+    if ( transparentPass )
+    {
       glEnable( GL_BLEND );
       glBlendFunc( GL_ONE, GL_ONE_MINUS_SRC_ALPHA );
-      glDepthMask( GL_FALSE);
+      glDepthMask( GL_FALSE );
     }
     for ( std::map<int, Geometry::Node>::iterator it = mNodes.begin(); it != mNodes.end(); it++ )
     {
       const Geometry::Node & node = it->second;
-    
+
       _shader->SetConstant( "mat_world", mMatrices[ node.mID ] * _worldRootMatrix );
-    
+
       for ( int i = 0; i < it->second.mMeshes.size(); i++ )
       {
         const Geometry::Mesh & mesh = mMeshes[ it->second.mMeshes[ i ] ];
         // Postpone rendering transparent meshes
-        if(mesh.mTransparent != bTransparentPass)
+        if ( mesh.mTransparent != transparentPass )
+        {
           continue;
+        }
         const Geometry::Material & material = mMaterials[ mesh.mMaterialIndex ];
-    
+
         _shader->SetConstant( "specular_shininess", material.mSpecularShininess );
-    
+
         SetColorMap( _shader, "map_diffuse", material.mColorMapDiffuse );
         SetColorMap( _shader, "map_normals", material.mColorMapNormals );
         SetColorMap( _shader, "map_specular", material.mColorMapSpecular );
@@ -542,13 +590,14 @@ void Geometry::Render( const glm::mat4x4 & _worldRootMatrix, Renderer::Shader * 
         SetColorMap( _shader, "map_ao", material.mColorMapAO );
         SetColorMap( _shader, "map_ambient", material.mColorMapAmbient );
         SetColorMap( _shader, "map_emissive", material.mColorMapEmissive );
-    
+
         glBindVertexArray( mesh.mVertexArrayObject );
-    
+
         glDrawElements( GL_TRIANGLES, mesh.mTriangleCount * 3, GL_UNSIGNED_INT, NULL );
       }
     }
-    if (bTransparentPass) {
+    if ( transparentPass )
+    {
       glDisable( GL_BLEND );
       glDepthMask( GL_TRUE );
     }
