@@ -60,8 +60,12 @@ Renderer::Texture * LoadTexture( Geometry * _geometry, const char * _type, const
 
     printf( "[geometry] Using embedded texture %d: '%s'\n", index, filename.c_str() );
 
-    _geometry->mEmbeddedTextures[ index ]->mRefCount++;
-    return _geometry->mEmbeddedTextures[ index ];
+    if ( _geometry->mEmbeddedTextures[ index ] )
+    {
+      _geometry->mEmbeddedTextures[ index ]->mRefCount++;
+      return _geometry->mEmbeddedTextures[ index ];
+    }
+    return NULL;
   }
 
   if ( filename.find( '\\' ) != -1 )
@@ -103,9 +107,9 @@ Renderer::Texture * LoadTexture( Geometry * _geometry, const char * _type, const
     }
   }
 
-  for ( int i = 0; _geometry->mEmbeddedTextures.size(); i++ )
+  for ( int i = 0; i < _geometry->mEmbeddedTextures.size(); i++ )
   {
-    if ( filename == _geometry->mEmbeddedTextures[ i ]->mFilename )
+    if ( _geometry->mEmbeddedTextures[ i ] && filename == _geometry->mEmbeddedTextures[ i ]->mFilename )
     {
       printf( "[geometry] Using embedded texture: '%s'\n", filename.c_str() );
 
@@ -256,17 +260,32 @@ bool Geometry::LoadMesh( const char * _path )
   // Load embedded textures, if any
   for ( unsigned int i = 0; i < scene->mNumTextures; i++ )
   {
-    if ( scene->mTextures[ i ]->mHeight == 0 )
+    aiTexture * texture = scene->mTextures[ i ];
+    Renderer::Texture * renderTexture = NULL;
+    if ( texture->mHeight == 0 )
     {
-      // Data is packed format
-      Renderer::Texture * texture = Renderer::CreateRGBA8TextureFromMemory( (unsigned char *) scene->mTextures[ i ]->pcData, scene->mTextures[ i ]->mWidth, true ); // TODO: currently forced to sRGB (problematic)
-      texture->mFilename = scene->mTextures[ i ]->mFilename.C_Str();
-      mEmbeddedTextures.push_back( texture );
+      // Data is a file
+      renderTexture = Renderer::CreateRGBA8TextureFromMemory( (unsigned char *) texture->pcData, texture->mWidth, true ); // TODO: currently forced to sRGB (problematic)
+      renderTexture->mFilename = texture->mFilename.C_Str();
+      mEmbeddedTextures.push_back( renderTexture );
     }
     else
     {
-      mEmbeddedTextures.push_back( NULL ); // Not supported yet
+      // Data is a set of pixels
+      unsigned int * rgba = new unsigned int[ texture->mWidth * texture->mHeight ];
+      for ( unsigned int j = 0; j < texture->mWidth * texture->mHeight; j++ )
+      {
+        rgba[ j ] = 
+          texture->pcData[ j ].r | 
+          ( texture->pcData[ j ].g << 8 ) |
+          ( texture->pcData[ j ].b << 16 ) |
+          ( texture->pcData[ j ].a << 24 );
+      }
+      renderTexture = Renderer::CreateRGBA8TextureFromRawData( rgba, texture->mWidth, texture->mHeight );
+      renderTexture->mFilename = texture->mFilename.C_Str();
+      delete[] rgba;
     }
+    mEmbeddedTextures.push_back( renderTexture );
   }
 
   //////////////////////////////////////////////////////////////////////////
@@ -365,9 +384,15 @@ bool Geometry::LoadMesh( const char * _path )
       vertices[ j ].v3Vector.x = sceneMesh->mVertices[ j ].x;
       vertices[ j ].v3Vector.y = sceneMesh->mVertices[ j ].y;
       vertices[ j ].v3Vector.z = sceneMesh->mVertices[ j ].z;
-      vertices[ j ].v3Normal.x = sceneMesh->mNormals[ j ].x;
-      vertices[ j ].v3Normal.y = sceneMesh->mNormals[ j ].y;
-      vertices[ j ].v3Normal.z = sceneMesh->mNormals[ j ].z;
+      vertices[ j ].v3Normal.x = 0.0f;
+      vertices[ j ].v3Normal.y = 0.0f;
+      vertices[ j ].v3Normal.z = 0.0f;
+      if( sceneMesh->mNormals )
+      {
+        vertices[ j ].v3Normal.x = sceneMesh->mNormals[ j ].x;
+        vertices[ j ].v3Normal.y = sceneMesh->mNormals[ j ].y;
+        vertices[ j ].v3Normal.z = sceneMesh->mNormals[ j ].z;
+      }
       vertices[ j ].v3Tangent.x = 0.0f;
       vertices[ j ].v3Tangent.y = 0.0f;
       vertices[ j ].v3Tangent.z = 0.0f;

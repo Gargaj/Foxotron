@@ -78,6 +78,7 @@ void Close();
 
 Texture * CreateRGBA8TextureFromFile( const char * szFilename, const bool _loadAsSRGB = false );
 Texture * CreateRGBA8TextureFromMemory( const unsigned char * pMemory, unsigned int nMemorySize, const bool _loadAsSRGB = false );
+Texture * CreateRGBA8TextureFromRawData( const unsigned int * pRGBA, unsigned int nWidth, unsigned int nHeight, const bool _loadAsSRGB = false );
 Texture * CreateRG32FTextureFromRawFile( const char* szFilename, int width, int height );
 void ReleaseTexture( Texture *& tex );
 

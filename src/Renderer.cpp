@@ -478,6 +478,46 @@ Texture * CreateRGBA8TextureFromMemory( const unsigned char * pMemory, unsigned 
   return tex;
 }
 
+Texture * CreateRGBA8TextureFromRawData( const unsigned int * pRGBA, unsigned int nWidth, unsigned int nHeight, const bool _loadAsSRGB /*= false */ )
+{
+  GLenum internalFormat = _loadAsSRGB ? GL_SRGB8_ALPHA8 : GL_RGBA8;
+  GLenum srcFormat = GL_RGBA;
+  GLenum format = GL_UNSIGNED_BYTE;
+
+  bool hasTransparentPixels = false;
+  unsigned char * bytes = (unsigned char *) pRGBA;
+  for ( int i = 3; i < nWidth * nHeight * 4; i += 4 )
+  {
+    if ( bytes[ i ] != 0xFF )
+    {
+      hasTransparentPixels = true;
+      break;
+    }
+  }
+
+  GLuint glTexId = 0;
+  glGenTextures( 1, &glTexId );
+  glBindTexture( GL_TEXTURE_2D, glTexId );
+
+  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
+  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
+  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR );
+
+  glTexImage2D( GL_TEXTURE_2D, 0, internalFormat, nWidth, nHeight, 0, srcFormat, format, pRGBA );
+  glGenerateMipmap( GL_TEXTURE_2D );
+
+  Texture * tex = new Texture();
+  tex->mWidth = nWidth;
+  tex->mHeight = nHeight;
+  tex->mType = TEXTURETYPE_2D;
+  tex->mGLTextureID = glTexId;
+  tex->mGLTextureUnit = textureUnit++;
+  tex->mTransparent = hasTransparentPixels;
+  tex->mRefCount = 1;
+  return tex;
+}
+
 Texture * CreateRG32FTextureFromRawFile( const char * szFilename, int width, int height)
 {
   const int comp = 2;
