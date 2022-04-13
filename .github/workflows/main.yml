@@ -9,7 +9,7 @@ jobs:
       with:
         submodules: recursive
     - name: CMake
-      run: cmake -DFOXOTRON_64BIT="NO" -G "Visual Studio 16 2019" -A Win32 .
+      run: cmake -DFOXOTRON_64BIT="NO" -G "Visual Studio 17 2022" -A Win32 .
     - name: Build
       run: cmake --build . --config Release
   build_w64:
@@ -20,7 +20,7 @@ jobs:
       with:
         submodules: recursive
     - name: CMake
-      run: cmake -DFOXOTRON_64BIT="YES" -G "Visual Studio 16 2019" -A x64 .
+      run: cmake -DFOXOTRON_64BIT="YES" -G "Visual Studio 17 2022" -A x64 .
     - name: Build
       run: cmake --build . --config Release
   build_linux:
