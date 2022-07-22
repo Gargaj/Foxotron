@@ -456,7 +456,9 @@ bool Geometry::LoadMesh( const char * _path )
 
     // By importing materials before meshes we can investigate whether a mesh is transparent and flag it as such.
     const Geometry::Material & mtl = mMaterials[ mesh.mMaterialIndex ];
-    mesh.mTransparent = ( mtl.mColorMapAlbedo.mTexture != nullptr ) ? ( mtl.mColorMapAlbedo.mTexture->mTransparent ) : ( mtl.mColorMapAlbedo.mColor.a != 1.0f );
+    mesh.mTransparent = false;
+    mesh.mTransparent |= ( mtl.mColorMapAlbedo.mTexture != nullptr ) ? ( mtl.mColorMapAlbedo.mTexture->mTransparent ) : ( mtl.mColorMapAlbedo.mColor.a != 1.0f );
+    mesh.mTransparent |= ( mtl.mColorMapDiffuse.mTexture != nullptr ) ? ( mtl.mColorMapDiffuse.mTexture->mTransparent ) : ( mtl.mColorMapDiffuse.mColor.a != 1.0f );
 
     mMeshes.insert( { i, mesh } );
   }
@@ -585,7 +587,7 @@ void Geometry::Render( const glm::mat4x4 & _worldRootMatrix, Renderer::Shader * 
     if ( transparentPass )
     {
       glEnable( GL_BLEND );
-      glBlendFunc( GL_ONE, GL_ONE_MINUS_SRC_ALPHA );
+      glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
       glDepthMask( GL_FALSE );
     }
     for ( std::map<int, Geometry::Node>::iterator it = mNodes.begin(); it != mNodes.end(); it++ )
