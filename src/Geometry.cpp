@@ -581,14 +581,14 @@ void Geometry::Render( const glm::mat4x4 & _worldRootMatrix, Renderer::Shader * 
 
   // TODO: Maybe we can cache the world matrices & 2 queues for opaque and transparent in LoadMesh
   // but that depends if we want to add animation support (in which case we can't).
-  for ( int j = 0; j < 2; ++j ) // loop twice, first opaque, then transparent
+  for ( int j = 0; j < 3; ++j ) // opaque, transparent backface, transparent frontface
   {
     bool transparentPass = j > 0;
     if ( transparentPass )
     {
       glEnable( GL_BLEND );
       glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-      glDepthMask( GL_FALSE );
+      glCullFace( j == 1 ? GL_FRONT : GL_BACK );
     }
     for ( std::map<int, Geometry::Node>::iterator it = mNodes.begin(); it != mNodes.end(); it++ )
     {
