@@ -1,0 +1,62 @@
+name: build-release
+on: [workflow_dispatch]
+jobs:
+  create_release:
+    runs-on: windows-latest
+    steps:
+    - name: Get date
+      id: date
+      run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Create subdirs
+      run: |
+        mkdir ./build.x64/
+        mkdir ./build.w32/
+        mkdir ./package/
+    - name: CMake X64
+      working-directory: ./build.x64
+      run: cmake -DFOXOTRON_64BIT="YES" -G "Visual Studio 17 2022" -A x64 ../
+    - name: Build X64
+      working-directory: ./build.x64
+      run: cmake --build . --config Release
+    - name: CMake W32
+      working-directory: ./build.w32
+      run: cmake -DFOXOTRON_64BIT="NO" -G "Visual Studio 17 2022" -A Win32 ../
+    - name: Build W32
+      working-directory: ./build.w32
+      run: cmake --build . --config Release
+    - name: Collect package
+      working-directory: ./package/
+      run: |
+        cp ../build.x64/Release/Foxotron.exe ./Foxotron_W64.exe
+        cp ../build.w32/Release/Foxotron.exe ./Foxotron_W32.exe
+        cp ../LICENSE ./
+        cp ../README.md ./
+        cp ../file_id.diz ./
+        cp -r ../Shaders ./
+        cp -r ../Skyboxes ./
+    - name: ZIP package
+      working-directory: ./package/
+      run: 7z a -r -tzip archive.zip * -mx9
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.date.outputs.date }}
+        release_name: ${{ steps.date.outputs.date }}
+        draft: true
+    - name: Upload Release Asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./package//archive.zip
+        asset_name: Foxotron_${{ steps.date.outputs.date }}.zip
+        asset_content_type: application/zip
