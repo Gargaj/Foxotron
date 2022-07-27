@@ -25,6 +25,7 @@ bool run = true;
 
 int nWidth = 0;
 int nHeight = 0;
+RENDERER_WINDOWMODE eMode = RENDERER_WINDOWMODE_FULLSCREEN;
 
 static void error_callback( int error, const char * description )
 {
@@ -58,6 +59,7 @@ bool Open( RENDERER_SETTINGS * _settings )
 
   nWidth = _settings->mWidth;
   nHeight = _settings->mHeight;
+  eMode = _settings->mWindowMode;
 
   glfwWindowHint( GLFW_RED_BITS, 8 );
   glfwWindowHint( GLFW_GREEN_BITS, 8 );
@@ -156,6 +158,47 @@ bool Open( RENDERER_SETTINGS * _settings )
   run = true;
 
   return true;
+}
+
+void SwitchFullscreen( RENDERER_WINDOWMODE newMode )
+{
+  if ( eMode == newMode )
+  {
+    return;
+  }
+
+  eMode = newMode;
+
+  switch ( eMode )
+  {
+    case RENDERER_WINDOWMODE_WINDOWED:
+      {
+        glfwSetWindowMonitor( mWindow, nullptr, 0, 0, nWidth, nHeight, 0 );
+
+        const GLFWvidmode * mode = glfwGetVideoMode( glfwGetPrimaryMonitor() );
+        if ( mode )
+        {
+          int monitorX, monitorY;
+          glfwGetMonitorPos( glfwGetPrimaryMonitor(), &monitorX, &monitorY );
+
+          int windowWidth, windowHeight;
+          glfwGetWindowSize( mWindow, &windowWidth, &windowHeight );
+
+          glfwSetWindowPos( mWindow,
+            monitorX + ( mode->width - windowWidth ) / 2,
+            monitorY + ( mode->height - windowHeight ) / 2 );
+        }
+      }
+      break;
+    case RENDERER_WINDOWMODE_FULLSCREEN:
+      {
+        glfwSetWindowMonitor( mWindow, glfwGetPrimaryMonitor(), 0, 0, nWidth, nHeight, 0 );
+      }
+      break;
+    default:
+      break;
+
+  }
 }
 
 std::string dropEventBuffer[ 512 ];

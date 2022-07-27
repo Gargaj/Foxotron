@@ -61,8 +61,10 @@ extern const char defaultShader[ 65536 ];
 extern int nWidth;
 extern int nHeight;
 extern GLFWwindow * mWindow;
+extern RENDERER_WINDOWMODE eMode;
 
 bool Open( RENDERER_SETTINGS * settings );
+void SwitchFullscreen( RENDERER_WINDOWMODE newMode );
 
 void StartFrame( glm::vec4 & clearColor );
 void RebindVertexArray();

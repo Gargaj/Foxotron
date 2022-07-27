@@ -425,6 +425,10 @@ int main( int argc, const char * argv[] )
     {
       openFileDialog = true;
     }
+    if ( ImGui::IsKeyPressed( GLFW_KEY_ENTER, false ) && ( ImGui::IsKeyDown( GLFW_KEY_LEFT_ALT ) || ImGui::IsKeyDown( GLFW_KEY_RIGHT_ALT ) ) )
+    {
+      Renderer::SwitchFullscreen( Renderer::eMode == RENDERER_WINDOWMODE_WINDOWED ? RENDERER_WINDOWMODE_FULLSCREEN : RENDERER_WINDOWMODE_WINDOWED );
+    }
     if ( ImGui::IsKeyPressed( GLFW_KEY_PAGE_UP, false ) )
     {
       const int shaderCount = options.get<jsonxx::Array>( "shaders" ).size();
@@ -488,6 +492,16 @@ int main( int argc, const char * argv[] )
         }
         if ( ImGui::BeginMenu( "View" ) )
         {
+          if ( ImGui::MenuItem( "Windowed", "Alt-Enter", Renderer::eMode == RENDERER_WINDOWMODE_WINDOWED ) )
+          {
+            Renderer::SwitchFullscreen( RENDERER_WINDOWMODE_WINDOWED );
+          }
+          if ( ImGui::MenuItem( "Fullscreen", "Alt-Enter", Renderer::eMode == RENDERER_WINDOWMODE_FULLSCREEN ) )
+          {
+            Renderer::SwitchFullscreen( RENDERER_WINDOWMODE_FULLSCREEN );
+          }
+          ImGui::Separator();
+
           ImGui::MenuItem( "Wireframe / Edged faces", "W", &edgedFaces );
           ImGui::MenuItem( "Show menu", "F11", &showImGui );
           ImGui::Separator();
