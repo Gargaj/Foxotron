@@ -34,6 +34,7 @@ jobs:
         cp ../build.x64/Release/Foxotron.exe ./Foxotron_W64.exe
         cp ../build.w32/Release/Foxotron.exe ./Foxotron_W32.exe
         cp ../LICENSE ./
+        cp ../config.json ./
         cp ../README.md ./
         cp ../file_id.diz ./
         cp -r ../Shaders ./
