@@ -192,7 +192,7 @@ void SwitchFullscreen( RENDERER_WINDOWMODE newMode )
       break;
     case RENDERER_WINDOWMODE_FULLSCREEN:
       {
-        glfwSetWindowMonitor( mWindow, glfwGetPrimaryMonitor(), 0, 0, nWidth, nHeight, 0 );
+        glfwSetWindowMonitor( mWindow, glfwGetPrimaryMonitor(), 0, 0, nWidth, nHeight, GLFW_DONT_CARE );
       }
       break;
     default:
