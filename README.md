@@ -46,3 +46,6 @@ Large portions of the code were cannibalized from [Bonzomatic](https://github.co
 ### Textures and cube maps
 
 All HDR textures are courtesy of the [HDRLabs sIBL archive](http://www.hdrlabs.com/sibl/archive.html).
+
+## Contact / discussion forum
+If you have anything to say, do it at https://www.pouet.net/topic.php?which=12347
