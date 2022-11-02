@@ -98,6 +98,11 @@ void main(void)
   vec4 diffusemap_alpha = sample_colormap( map_diffuse, out_texcoord );
   vec3 diffusemap = diffusemap_alpha.xyz;
   float alpha = diffusemap_alpha.w;
+  if (alpha < 0.001)
+  {
+    discard;
+  }
+
   vec3 normalmap = normalize(texture( map_normals.tex, out_texcoord ).xyz * vec3(2.0) - vec3(1.0));
   vec4 specularmap = sample_colormap( map_specular, out_texcoord );
 

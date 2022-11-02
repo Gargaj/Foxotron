@@ -263,6 +263,10 @@ void main(void)
     baseColor_alpha = sample_colormap( map_diffuse, out_texcoord );
   baseColor = baseColor_alpha.xyz;
   alpha = baseColor_alpha.w;
+  if (alpha < 0.001)
+  {
+    discard;
+  }
 
   roughness = sample_colormap( map_roughness, out_texcoord ).x;
   metallic = sample_colormap( map_metallic, out_texcoord ).x;
