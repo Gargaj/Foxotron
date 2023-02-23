@@ -50,6 +50,7 @@ Renderer::Shader * LoadShader( const char * vsPath, const char * fsPath )
   return shader;
 }
 
+const jsonxx::Object * gCurrentSkyImageConfig = NULL;
 const jsonxx::Object * gCurrentShaderConfig = NULL;
 Renderer::Shader * gCurrentShader = NULL;
 bool LoadShaderConfig( const jsonxx::Object * _shader )
@@ -72,10 +73,162 @@ bool LoadShaderConfig( const jsonxx::Object * _shader )
   return true;
 }
 
+jsonxx::Object gOptions;
+
 glm::vec3 gCameraTarget( 0.0f, 0.0f, 0.0f );
 float gCameraDistance = 500.0f;
 Geometry gModel;
 
+float gCameraYaw = glm::pi<float>() / 4.0f;
+float gCameraPitch = 0.25f;
+float gLightYaw = 0.0f;
+float gLightPitch = 0.0f;
+float gSkysphereOpacity = 1.0f;
+float gSkysphereBlur = 0.0f;
+glm::vec4 gClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+void LoadSkyImageConfig( const jsonxx::Object & obj );
+
+void LoadMeshConfig( const char * path )
+{
+  FILE * configFile = fopen( path, "rb" );
+  if ( !configFile )
+  {
+    return;
+  }
+
+  char meshconfigString[ 4096 ] = { 0 };
+  memset( meshconfigString, 0, 4096 );
+  fread( meshconfigString, 1, 4096, configFile );
+  fclose( configFile );
+
+  jsonxx::Object meshconfigRoot;
+  if ( !meshconfigRoot.parse( meshconfigString ) )
+  {
+    return;
+  }
+  if ( !meshconfigRoot.has<jsonxx::Object>( "config" ) )
+  {
+    return;
+  }
+
+  const jsonxx::Object & meshconfig = meshconfigRoot.get<jsonxx::Object>( "config" );
+  if ( meshconfig.has<jsonxx::String>( "shader" ) )
+  {
+    const std::string & shaderName = meshconfig.get<jsonxx::String>( "shader" );
+    const int shaderCount = gOptions.get<jsonxx::Array>( "shaders" ).size();
+    for ( int i = 0; i < shaderCount; i++ )
+    {
+      const jsonxx::Object & shaderConfig = gOptions.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( i );
+      if ( shaderConfig.get<jsonxx::String>( "name" ) == shaderName )
+      {
+        LoadShaderConfig( &shaderConfig );
+        gModel.RebindVertexArray( gCurrentShader );
+        break;
+      }
+    }
+  }
+  if ( meshconfig.has<jsonxx::String>( "skyImage" ) )
+  {
+    const std::string & skyImageName = meshconfig.get<jsonxx::String>( "skyImage" );
+    const int skyImageCount = gOptions.get<jsonxx::Array>( "skyImages" ).size();
+    for ( int i = 0; i < skyImageCount; i++ )
+    {
+      const jsonxx::Object & skyImageConfig = gOptions.get<jsonxx::Array>( "skyImages" ).get<jsonxx::Object>( i );
+      if ( skyImageConfig.get<jsonxx::String>( "reflection" ) == skyImageName )
+      {
+        LoadSkyImageConfig( skyImageConfig );
+        break;
+      }
+    }
+  }
+  if ( meshconfig.has<jsonxx::Number>( "cameraDistance" ) )
+  {
+    gCameraDistance = (float) meshconfig.get<jsonxx::Number>( "cameraDistance" );
+  }
+  if ( meshconfig.has<jsonxx::Number>( "cameraYaw" ) )
+  {
+    gCameraYaw = (float) meshconfig.get<jsonxx::Number>( "cameraYaw" );
+  }
+  if ( meshconfig.has<jsonxx::Number>( "cameraPitch" ) )
+  {
+    gCameraPitch = (float) meshconfig.get<jsonxx::Number>( "cameraPitch" );
+  }
+  if ( meshconfig.has<jsonxx::Number>( "lightYaw" ) )
+  {
+    gLightYaw = (float) meshconfig.get<jsonxx::Number>( "lightYaw" );
+  }
+  if ( meshconfig.has<jsonxx::Number>( "lightPitch" ) )
+  {
+    gLightPitch = (float) meshconfig.get<jsonxx::Number>( "lightPitch" );
+  }
+  if ( meshconfig.has<jsonxx::Number>( "skysphereOpacity" ) )
+  {
+    gSkysphereOpacity = (float) meshconfig.get<jsonxx::Number>( "skysphereOpacity" );
+  }
+  if ( meshconfig.has<jsonxx::Number>( "skysphereBlur" ) )
+  {
+    gSkysphereBlur = (float) meshconfig.get<jsonxx::Number>( "skysphereBlur" );
+  }
+  if ( meshconfig.has<jsonxx::Array>( "clearColor" ) )
+  {
+    gClearColor.x = (float) meshconfig.get<jsonxx::Array>( "clearColor" ).get<jsonxx::Number>( 0 );
+    gClearColor.y = (float) meshconfig.get<jsonxx::Array>( "clearColor" ).get<jsonxx::Number>( 1 );
+    gClearColor.z = (float) meshconfig.get<jsonxx::Array>( "clearColor" ).get<jsonxx::Number>( 2 );
+    gClearColor.w = (float) meshconfig.get<jsonxx::Array>( "clearColor" ).get<jsonxx::Number>( 3 );
+  }
+  if ( meshconfig.has<jsonxx::Array>( "cameraTarget" ) )
+  {
+    gCameraTarget.x = (float) meshconfig.get<jsonxx::Array>( "cameraTarget" ).get<jsonxx::Number>( 0 );
+    gCameraTarget.y = (float) meshconfig.get<jsonxx::Array>( "cameraTarget" ).get<jsonxx::Number>( 1 );
+    gCameraTarget.z = (float) meshconfig.get<jsonxx::Array>( "cameraTarget" ).get<jsonxx::Number>( 2 );
+  }
+}
+
+void SaveMeshConfig( const char * path )
+{
+  FILE * configFile = fopen( path, "wb" );
+  if ( !configFile )
+  {
+    printf( "Unable to write mesh config file '%s'\n", path );
+    return;
+  }
+
+  jsonxx::Object meshconfig;
+
+  meshconfig << "shader" << gCurrentShaderConfig->get<jsonxx::String>( "name" );
+  meshconfig << "skyImage" << gCurrentSkyImageConfig->get<jsonxx::String>( "reflection" );
+  meshconfig << "cameraDistance" << gCameraDistance;
+  meshconfig << "cameraYaw" << gCameraYaw;
+  meshconfig << "cameraPitch" << gCameraPitch;
+  meshconfig << "lightYaw" << gLightYaw;
+  meshconfig << "lightPitch" << gLightPitch;
+  meshconfig << "skysphereOpacity" << gSkysphereOpacity;
+  meshconfig << "skysphereBlur" << gSkysphereBlur;
+
+  jsonxx::Array clearColorArray;
+  clearColorArray << gClearColor.x;
+  clearColorArray << gClearColor.y;
+  clearColorArray << gClearColor.z;
+  clearColorArray << gClearColor.w;
+  meshconfig << "clearColor" << clearColorArray;
+
+  jsonxx::Array cameraTargetArray;
+  cameraTargetArray << gCameraTarget.x;
+  cameraTargetArray << gCameraTarget.y;
+  cameraTargetArray << gCameraTarget.z;
+  meshconfig << "cameraTarget" << cameraTargetArray;
+
+  jsonxx::Object meshconfigRoot;
+  meshconfigRoot << "config" << meshconfig;
+
+  std::string meshconfigString = meshconfigRoot.json();
+  fwrite( meshconfigString.c_str(), 1, meshconfigString.length(), configFile );
+  fclose( configFile );
+
+  printf( "Saved mesh config file to '%s'\n", path );
+}
+
+std::string gMeshPath;
 bool LoadMesh( const char * path )
 {
   if ( !gModel.LoadMesh( path ) )
@@ -83,10 +236,15 @@ bool LoadMesh( const char * path )
     return false;
   }
 
+  gMeshPath = path;
   gModel.RebindVertexArray( gCurrentShader );
 
   gCameraTarget = ( gModel.mAABBMin + gModel.mAABBMax ) / 2.0f;
   gCameraDistance = glm::length( gCameraTarget - gModel.mAABBMin ) * 4.0f;
+
+  char meshConfigPath[ 512 ];
+  snprintf( meshConfigPath, 512, "%s.foxocfg", gMeshPath.c_str() );
+  LoadMeshConfig( meshConfigPath );
 
   return true;
 }
@@ -200,34 +358,35 @@ struct SkyImages
   float sunPitch = 0.f;
   glm::vec3 sunColor{ 1.f, 1.f, 1.f };
 };
+SkyImages gCurrentSkyImage;
 
-SkyImages gSkyImages;
-
-void loadSkyImages( const jsonxx::Object & obj )
+void LoadSkyImageConfig( const jsonxx::Object & obj )
 {
+  gCurrentSkyImageConfig = &obj;
+
   const char* reflectionPath = obj.get<jsonxx::String>( "reflection" ).c_str();
 
   // Reflection map
 
-  if ( gSkyImages.reflection )
+  if ( gCurrentSkyImage.reflection )
   {
-    Renderer::ReleaseTexture( gSkyImages.reflection );
-    gSkyImages.reflection = NULL;
+    Renderer::ReleaseTexture( gCurrentSkyImage.reflection );
+    gCurrentSkyImage.reflection = NULL;
   }
-  gSkyImages.reflection = Renderer::CreateRGBA8TextureFromFile( reflectionPath );
+  gCurrentSkyImage.reflection = Renderer::CreateRGBA8TextureFromFile( reflectionPath );
 
-  if ( gSkyImages.reflection )
+  if ( gCurrentSkyImage.reflection )
   {
-      glBindTexture( GL_TEXTURE_2D, gSkyImages.reflection->mGLTextureID );
+      glBindTexture( GL_TEXTURE_2D, gCurrentSkyImage.reflection->mGLTextureID );
 
       glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
       glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
   }
 
-  if ( gSkyImages.env )
+  if ( gCurrentSkyImage.env )
   {
-    Renderer::ReleaseTexture( gSkyImages.env );
-    gSkyImages.env = NULL;
+    Renderer::ReleaseTexture( gCurrentSkyImage.env );
+    gCurrentSkyImage.env = NULL;
   }
 
   // Irradiance map
@@ -235,11 +394,11 @@ void loadSkyImages( const jsonxx::Object & obj )
   if ( obj.has<jsonxx::String>( "env" ) )
   {
     const char* envPath =  obj.get<jsonxx::String>( "env" ).c_str();
-    gSkyImages.env = Renderer::CreateRGBA8TextureFromFile( envPath );
+    gCurrentSkyImage.env = Renderer::CreateRGBA8TextureFromFile( envPath );
 
-    if ( gSkyImages.env )
+    if ( gCurrentSkyImage.env )
     {
-      glBindTexture( GL_TEXTURE_2D, gSkyImages.env->mGLTextureID );
+      glBindTexture( GL_TEXTURE_2D, gCurrentSkyImage.env->mGLTextureID );
 
       glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
       glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
@@ -261,15 +420,14 @@ void loadSkyImages( const jsonxx::Object & obj )
 
     if ( uv != glm::vec2( 0.f, 0.f ) )
     {
-      gSkyImages.sunYaw = M_PI * (-2. * uv.x + 0.5f);
-      gSkyImages.sunPitch = (.5f - uv.y) * M_PI;
+      gCurrentSkyImage.sunYaw = M_PI * (-2. * uv.x + 0.5f);
+      gCurrentSkyImage.sunPitch = (.5f - uv.y) * M_PI;
     }
   }
 }
 
 int main( int argc, const char * argv[] )
 {
-  jsonxx::Object options;
   FILE * configFile = fopen( "config.json", "rb" );
   if ( !configFile )
   {
@@ -277,13 +435,13 @@ int main( int argc, const char * argv[] )
     return -10;
   }
 
-  char configData[ 65535 ];
-  memset( configData, 0, 65535 );
-  fread( configData, 1, 65535, configFile );
+  char configData[ 4096 ];
+  memset( configData, 0, 4096 );
+  fread( configData, 1, 4096, configFile );
   fclose( configFile );
 
-  options.parse( configData );
-  if ( !options.has<jsonxx::Array>( "shaders" ) || !options.has<jsonxx::Array>( "skyImages" ) )
+  gOptions.parse( configData );
+  if ( !gOptions.has<jsonxx::Array>( "shaders" ) || !gOptions.has<jsonxx::Array>( "skyImages" ) )
   {
     printf( "Config file broken!\n" );
     return -11;
@@ -329,10 +487,15 @@ int main( int argc, const char * argv[] )
 
   //////////////////////////////////////////////////////////////////////////
   // Bootstrap
-  if ( !LoadShaderConfig( &options.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( 0 ) ) )
+  if ( !LoadShaderConfig( &gOptions.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( 0 ) ) )
   {
     return -4;
   }
+
+  auto firstSkyImageConfig = gOptions.get<jsonxx::Array>( "skyImages" ).get<jsonxx::Object>( 0 );
+  LoadSkyImageConfig( firstSkyImageConfig );
+  gLightYaw = gCurrentSkyImage.sunYaw;
+  gLightPitch = gCurrentSkyImage.sunPitch;
 
   if ( argc >= 2 )
   {
@@ -349,16 +512,9 @@ int main( int argc, const char * argv[] )
   bool rotatingCamera = false;
   bool movingCamera = false;
   bool movingLight = false;
-  float cameraYaw = glm::pi<float>() / 4.0f;
-  float cameraPitch = 0.25f;
-  float lightYaw = 0.0f;
-  float lightPitch = 0.0f;
   float mouseClickPosX = 0.0f;
   float mouseClickPosY = 0.0f;
-  glm::vec4 clearColor( 0.5f, 0.5f, 0.5f, 1.0f );
   std::string supportedExtensions = Geometry::GetSupportedExtensions();
-  float skysphereOpacity = 1.0f;
-  float skysphereBlur = 0.0f;
   float exposure = 1.0f;
   bool showImGui = true;
   bool edgedFaces = false;
@@ -370,11 +526,6 @@ int main( int argc, const char * argv[] )
     0.0f, 0.0f, 1.0f, 0.0f,
     0.0f,-1.0f, 0.0f, 0.0f,
     0.0f, 0.0f, 0.0f, 1.0f );
-
-  auto firstSkyImages = options.get<jsonxx::Array>( "skyImages" ).get<jsonxx::Object>( 0 );
-  loadSkyImages( firstSkyImages );
-  lightYaw = gSkyImages.sunYaw;
-  lightPitch = gSkyImages.sunPitch;
 
   loadBrdfLookupTable();
 
@@ -390,7 +541,7 @@ int main( int argc, const char * argv[] )
 
   while ( !Renderer::WantsToQuit() && !appWantsToQuit )
   {
-    Renderer::StartFrame( clearColor );
+    Renderer::StartFrame( gClearColor );
 
     //////////////////////////////////////////////////////////////////////////
     // ImGui windows etc.
@@ -399,6 +550,8 @@ int main( int argc, const char * argv[] )
     ImGui::NewFrame();
 
     bool openFileDialog = false;
+    bool reloadMeshConfig = false;
+    bool saveMeshConfig = false;
     
     ImGui::SetMouseCursor( hideCursorTimer <= 5.0f ? ImGuiMouseCursor_Arrow : ImGuiMouseCursor_None );
 
@@ -406,8 +559,8 @@ int main( int argc, const char * argv[] )
     {
       gCameraTarget = ( gModel.mAABBMin + gModel.mAABBMax ) / 2.0f;
       gCameraDistance = glm::length( gCameraTarget - gModel.mAABBMin ) * 4.0f;
-      cameraYaw = glm::pi<float>() / 4.0f;
-      cameraPitch = 0.25f;
+      gCameraYaw = glm::pi<float>() / 4.0f;
+      gCameraPitch = 0.25f;
     }
     if ( ImGui::IsKeyPressed( GLFW_KEY_F11, false ) )
     {
@@ -425,19 +578,27 @@ int main( int argc, const char * argv[] )
     {
       openFileDialog = true;
     }
+    if ( ImGui::IsKeyPressed( GLFW_KEY_S, false ) && ( ImGui::IsKeyDown( GLFW_KEY_LEFT_CONTROL ) || ImGui::IsKeyDown( GLFW_KEY_RIGHT_CONTROL ) ) )
+    {
+      saveMeshConfig = true;
+    }
+    if ( ImGui::IsKeyPressed( GLFW_KEY_L, false ) && ( ImGui::IsKeyDown( GLFW_KEY_LEFT_CONTROL ) || ImGui::IsKeyDown( GLFW_KEY_RIGHT_CONTROL ) ) )
+    {
+      reloadMeshConfig = true;
+    }
     if ( ImGui::IsKeyPressed( GLFW_KEY_ENTER, false ) && ( ImGui::IsKeyDown( GLFW_KEY_LEFT_ALT ) || ImGui::IsKeyDown( GLFW_KEY_RIGHT_ALT ) ) )
     {
       Renderer::SwitchFullscreen( Renderer::eMode == RENDERER_WINDOWMODE_WINDOWED ? RENDERER_WINDOWMODE_FULLSCREEN : RENDERER_WINDOWMODE_WINDOWED );
     }
     if ( ImGui::IsKeyPressed( GLFW_KEY_PAGE_UP, false ) )
     {
-      const int shaderCount = options.get<jsonxx::Array>( "shaders" ).size();
+      const int shaderCount = gOptions.get<jsonxx::Array>( "shaders" ).size();
       for ( int i = 0; i < shaderCount; i++ )
       {
-        const jsonxx::Object & shaderConfig = options.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( i );
+        const jsonxx::Object & shaderConfig = gOptions.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( i );
         if ( &shaderConfig == gCurrentShaderConfig )
         {
-          const jsonxx::Object & newShaderConfig = options.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( ( i - 1 + shaderCount ) % shaderCount );
+          const jsonxx::Object & newShaderConfig = gOptions.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( ( i - 1 + shaderCount ) % shaderCount );
           LoadShaderConfig( &newShaderConfig );
           gModel.RebindVertexArray( gCurrentShader );
           break;
@@ -446,13 +607,13 @@ int main( int argc, const char * argv[] )
     }
     if ( ImGui::IsKeyPressed( GLFW_KEY_PAGE_DOWN, false ) )
     {
-      const int shaderCount = options.get<jsonxx::Array>( "shaders" ).size();
+      const int shaderCount = gOptions.get<jsonxx::Array>( "shaders" ).size();
       for ( int i = 0; i < shaderCount; i++ )
       {
-        const jsonxx::Object & shaderConfig = options.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( i );
+        const jsonxx::Object & shaderConfig = gOptions.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( i );
         if ( &shaderConfig == gCurrentShaderConfig )
         {
-          const jsonxx::Object & newShaderConfig = options.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( ( i + 1 + shaderCount ) % shaderCount );
+          const jsonxx::Object & newShaderConfig = gOptions.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( ( i + 1 + shaderCount ) % shaderCount );
           LoadShaderConfig( &newShaderConfig );
           gModel.RebindVertexArray( gCurrentShader );
           break;
@@ -469,6 +630,15 @@ int main( int argc, const char * argv[] )
           if ( ImGui::MenuItem( "Open model...", "Ctrl-O" ) )
           {
             openFileDialog = true;
+          }
+          ImGui::Separator();
+          if ( ImGui::MenuItem( "Reload model config", "Ctrl-L" ) )
+          {
+            reloadMeshConfig = true;
+          }
+          if ( ImGui::MenuItem( "Save model config", "Ctrl-S" ) )
+          {
+            saveMeshConfig = true;
           }
           ImGui::Separator();
           if ( ImGui::MenuItem( "Exit", "Alt-F4" ) )
@@ -511,33 +681,33 @@ int main( int argc, const char * argv[] )
           {
             gCameraTarget = ( gModel.mAABBMin + gModel.mAABBMax ) / 2.0f;
             gCameraDistance = glm::length( gCameraTarget - gModel.mAABBMin ) * 4.0f;
-            cameraYaw = glm::pi<float>() / 4.0f;
-            cameraPitch = 0.25f;
+            gCameraYaw = glm::pi<float>() / 4.0f;
+            gCameraPitch = 0.25f;
           }
           ImGui::Separator();
 
-          ImGui::ColorEdit4( "Background", (float *) &clearColor, ImGuiColorEditFlags_AlphaPreviewHalf );
+          ImGui::ColorEdit4( "Background", (float *) &gClearColor, ImGuiColorEditFlags_AlphaPreviewHalf );
           ImGui::Separator();
 
           ImGui::DragFloat( "Environment exposure", &exposure, 0.01f, 0.1f, 4.0f );
-          ImGui::DragFloat( "Sky blur", &skysphereBlur, 0.01f, 0.0f, 1.0f );
-          ImGui::DragFloat( "Sky opacity", &skysphereOpacity, 0.02f, 0.0f, 1.0f );
+          ImGui::DragFloat( "Sky blur", &gSkysphereBlur, 0.01f, 0.0f, 1.0f );
+          ImGui::DragFloat( "Sky opacity", &gSkysphereOpacity, 0.02f, 0.0f, 1.0f );
 #ifdef _DEBUG
           ImGui::Separator();
-          ImGui::DragFloat( "Camera Yaw", &cameraYaw, 0.01f );
-          ImGui::DragFloat( "Camera Pitch", &cameraPitch, 0.01f );
+          ImGui::DragFloat( "Camera Yaw", &gCameraYaw, 0.01f );
+          ImGui::DragFloat( "Camera Pitch", &gCameraPitch, 0.01f );
           ImGui::DragFloat3( "Camera Target", (float *) &gCameraTarget );
-          ImGui::DragFloat( "Light Yaw", &lightYaw, 0.01f );
-          ImGui::DragFloat( "Light Pitch", &lightPitch, 0.01f );
+          ImGui::DragFloat( "Light Yaw", &gLightYaw, 0.01f );
+          ImGui::DragFloat( "Light Pitch", &gLightPitch, 0.01f );
 #endif
           ImGui::EndMenu();
         }
         if ( ImGui::BeginMenu( "Shaders" ) )
         {
-          for ( int i = 0; i < options.get<jsonxx::Array>( "shaders" ).size(); i++ )
+          for ( int i = 0; i < gOptions.get<jsonxx::Array>( "shaders" ).size(); i++ )
           {
-            const jsonxx::Object & shaderConfig = options.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( i );
-            const std::string & name = options.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( i ).get<jsonxx::String>( "name" );
+            const jsonxx::Object & shaderConfig = gOptions.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( i );
+            const std::string & name = gOptions.get<jsonxx::Array>( "shaders" ).get<jsonxx::Object>( i ).get<jsonxx::String>( "name" );
 
             bool selected = &shaderConfig == gCurrentShaderConfig;
             if ( ImGui::MenuItem( name.c_str(), NULL, &selected ) )
@@ -549,17 +719,17 @@ int main( int argc, const char * argv[] )
           if ( gCurrentShaderConfig && gCurrentShaderConfig->get<jsonxx::Boolean>( "showSkybox" ) )
           {
             ImGui::Separator();
-            for ( int i = 0; i < options.get<jsonxx::Array>( "skyImages" ).size(); i++ )
+            for ( int i = 0; i < gOptions.get<jsonxx::Array>( "skyImages" ).size(); i++ )
             {
-              const auto & images = options.get<jsonxx::Array>( "skyImages" ).get<jsonxx::Object>( i );
+              const auto & images = gOptions.get<jsonxx::Array>( "skyImages" ).get<jsonxx::Object>( i );
               const std::string & filename = images.get<jsonxx::String>( "reflection" );
 
-              bool selected = ( gSkyImages.reflection && gSkyImages.reflection->mFilename == filename );
+              bool selected = ( gCurrentSkyImage.reflection && gCurrentSkyImage.reflection->mFilename == filename );
               if ( ImGui::MenuItem( filename.c_str(), NULL, &selected ) )
               {
-                loadSkyImages( images );
-                lightYaw = gSkyImages.sunYaw;
-                lightPitch = gSkyImages.sunPitch;
+                LoadSkyImageConfig( images );
+                gLightYaw = gCurrentSkyImage.sunYaw;
+                gLightPitch = gCurrentSkyImage.sunPitch;
               }
             }
           }
@@ -573,6 +743,18 @@ int main( int argc, const char * argv[] )
     if ( openFileDialog )
     {
       ImGui::OpenPopup( "Open model" );
+    }
+    if ( reloadMeshConfig )
+    {
+      char meshConfigPath[ 512 ];
+      snprintf( meshConfigPath, 512, "%s.foxocfg", gMeshPath.c_str() );
+      LoadMeshConfig( meshConfigPath );
+    }
+    if ( saveMeshConfig )
+    {
+      char meshConfigPath[ 512 ];
+      snprintf( meshConfigPath, 512, "%s.foxocfg", gMeshPath.c_str() );
+      SaveMeshConfig( meshConfigPath );
     }
 
     if ( file_dialog.showFileDialog( "Open model", imgui_addons::ImGuiFileBrowser::DialogMode::OPEN, ImVec2( 700, 310 ), supportedExtensions.c_str() ) )
@@ -712,24 +894,24 @@ int main( int argc, const char * argv[] )
       const float rotationSpeed = 130.0f;
       if ( rotatingCamera )
       {
-        cameraYaw -= ( mouseEvent.x - mouseClickPosX ) / rotationSpeed;
-        cameraPitch += ( mouseEvent.y - mouseClickPosY ) / rotationSpeed;
+        gCameraYaw -= ( mouseEvent.x - mouseClickPosX ) / rotationSpeed;
+        gCameraPitch += ( mouseEvent.y - mouseClickPosY ) / rotationSpeed;
 
         // Clamp to avoid gimbal lock
-        cameraPitch = std::min( cameraPitch, 1.5f );
-        cameraPitch = std::max( cameraPitch, -1.5f );
+        gCameraPitch = std::min( gCameraPitch, 1.5f );
+        gCameraPitch = std::max( gCameraPitch, -1.5f );
 
         mouseClickPosX = mouseEvent.x;
         mouseClickPosY = mouseEvent.y;
       }
       if ( movingLight )
       {
-        lightYaw += ( mouseEvent.x - mouseClickPosX ) / rotationSpeed;
-        lightPitch -= ( mouseEvent.y - mouseClickPosY ) / rotationSpeed;
+        gLightYaw += ( mouseEvent.x - mouseClickPosX ) / rotationSpeed;
+        gLightPitch -= ( mouseEvent.y - mouseClickPosY ) / rotationSpeed;
 
         // Clamp to avoid gimbal lock
-        lightPitch = std::min( lightPitch, 1.5f );
-        lightPitch = std::max( lightPitch, -1.5f );
+        gLightPitch = std::min( gLightPitch, 1.5f );
+        gLightPitch = std::max( gLightPitch, -1.5f );
 
         mouseClickPosX = mouseEvent.x;
         mouseClickPosY = mouseEvent.y;
@@ -740,8 +922,8 @@ int main( int argc, const char * argv[] )
         const float moveY = ( mouseEvent.y - mouseClickPosY ) / panSpeed;
 
         glm::vec3 newBaseZ( 0.0f, 0.0f, -1.0f );
-        newBaseZ = glm::rotateX( newBaseZ, cameraPitch );
-        newBaseZ = glm::rotateY( newBaseZ, cameraYaw );
+        newBaseZ = glm::rotateX( newBaseZ, gCameraPitch );
+        newBaseZ = glm::rotateY( newBaseZ, gCameraYaw );
         newBaseZ = -newBaseZ;
 
         glm::vec3 up( 0.0f, 1.0f, 0.0f );
@@ -778,15 +960,15 @@ int main( int argc, const char * argv[] )
 
     if ( automaticCamera )
     {
-      cameraYaw += io.DeltaTime * 0.3f;
+      gCameraYaw += io.DeltaTime * 0.3f;
     }
 
     //////////////////////////////////////////////////////////////////////////
     // Skysphere render
 
     glm::vec3 cameraPosition( 0.0f, 0.0f, -1.0f );
-    cameraPosition = glm::rotateX( cameraPosition, cameraPitch );
-    cameraPosition = glm::rotateY( cameraPosition, cameraYaw );
+    cameraPosition = glm::rotateX( cameraPosition, gCameraPitch );
+    cameraPosition = glm::rotateY( cameraPosition, gCameraYaw );
 
     static glm::mat4x4 worldRootXYZ( 1.0f );
     if ( gCurrentShaderConfig->get<jsonxx::Boolean>( "showSkybox" ) )
@@ -798,25 +980,25 @@ int main( int argc, const char * argv[] )
       viewMatrix = glm::lookAtRH( cameraPosition * 0.15f, glm::vec3( 0.0f, 0.0f, 0.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
       skysphereShader->SetConstant( "mat_view", viewMatrix );
 
-      skysphereShader->SetConstant( "has_tex_skysphere", gSkyImages.reflection != NULL );
-      skysphereShader->SetConstant( "has_tex_skyenv", gSkyImages.env != NULL );
+      skysphereShader->SetConstant( "has_tex_skysphere", gCurrentSkyImage.reflection != NULL );
+      skysphereShader->SetConstant( "has_tex_skyenv", gCurrentSkyImage.env != NULL );
 
-      if ( gSkyImages.reflection )
+      if ( gCurrentSkyImage.reflection )
       {
-        const float mipCount = floor( log2( gSkyImages.reflection->mHeight ) );
-        skysphereShader->SetTexture( "tex_skysphere", gSkyImages.reflection );
+        const float mipCount = floor( log2( gCurrentSkyImage.reflection->mHeight ) );
+        skysphereShader->SetTexture( "tex_skysphere", gCurrentSkyImage.reflection );
         skysphereShader->SetConstant( "skysphere_mip_count", mipCount );
       }
 
-      if ( gSkyImages.env )
+      if ( gCurrentSkyImage.env )
       {
-        skysphereShader->SetTexture( "tex_skyenv", gSkyImages.env );
+        skysphereShader->SetTexture( "tex_skyenv", gCurrentSkyImage.env );
       }
 
-      skysphereShader->SetConstant( "background_color", clearColor );
-      skysphereShader->SetConstant( "skysphere_blur", skysphereBlur );
-      skysphereShader->SetConstant( "skysphere_opacity", skysphereOpacity );
-      skysphereShader->SetConstant( "skysphere_rotation", lightYaw - gSkyImages.sunYaw  );
+      skysphereShader->SetConstant( "background_color", gClearColor );
+      skysphereShader->SetConstant( "skysphere_blur", gSkysphereBlur );
+      skysphereShader->SetConstant( "skysphere_opacity", gSkysphereOpacity );
+      skysphereShader->SetConstant( "skysphere_rotation", gLightYaw - gCurrentSkyImage.sunYaw  );
       skysphereShader->SetConstant( "exposure", exposure );
       skysphereShader->SetConstant( "frame_count", frameCount );
 
@@ -838,37 +1020,37 @@ int main( int argc, const char * argv[] )
     gCurrentShader->SetConstant( "camera_position", cameraPosition );
 
     glm::vec3 lightDirection( 0.0f, 0.0f, 1.0f );
-    lightDirection = glm::rotateX( lightDirection, lightPitch );
-    lightDirection = glm::rotateY( lightDirection, lightYaw );
+    lightDirection = glm::rotateX( lightDirection, gLightPitch );
+    lightDirection = glm::rotateY( lightDirection, gLightYaw );
 
     glm::vec3 fillLightDirection( 0.0f, 0.0f, 1.0f );
-    fillLightDirection = glm::rotateX( fillLightDirection, lightPitch - 0.4f );
-    fillLightDirection = glm::rotateY( fillLightDirection, lightYaw + 0.8f );
+    fillLightDirection = glm::rotateX( fillLightDirection, gLightPitch - 0.4f );
+    fillLightDirection = glm::rotateY( fillLightDirection, gLightYaw + 0.8f );
 
     gCurrentShader->SetConstant( "lights[0].direction", lightDirection );
-    gCurrentShader->SetConstant( "lights[0].color", gSkyImages.sunColor );
+    gCurrentShader->SetConstant( "lights[0].color", gCurrentSkyImage.sunColor );
     gCurrentShader->SetConstant( "lights[1].direction", fillLightDirection );
     gCurrentShader->SetConstant( "lights[1].color", glm::vec3( 0.5f ) );
     gCurrentShader->SetConstant( "lights[2].direction", -fillLightDirection );
     gCurrentShader->SetConstant( "lights[2].color", glm::vec3( 0.25f ) );
 
-    gCurrentShader->SetConstant( "skysphere_rotation", lightYaw - gSkyImages.sunYaw );
+    gCurrentShader->SetConstant( "skysphere_rotation", gLightYaw - gCurrentSkyImage.sunYaw );
 
     viewMatrix = glm::lookAtRH( cameraPosition + gCameraTarget, gCameraTarget, glm::vec3( 0.0f, 1.0f, 0.0f ) );
     gCurrentShader->SetConstant( "mat_view", viewMatrix );
     gCurrentShader->SetConstant( "mat_view_inverse", glm::inverse( viewMatrix ) );
 
-    gCurrentShader->SetConstant( "has_tex_skysphere", gSkyImages.reflection != NULL );
-    gCurrentShader->SetConstant( "has_tex_skyenv", gSkyImages.env != NULL );
-    if ( gSkyImages.reflection )
+    gCurrentShader->SetConstant( "has_tex_skysphere", gCurrentSkyImage.reflection != NULL );
+    gCurrentShader->SetConstant( "has_tex_skyenv", gCurrentSkyImage.env != NULL );
+    if ( gCurrentSkyImage.reflection )
     {
-      float mipCount = floor( log2( gSkyImages.reflection->mHeight ) );
-      gCurrentShader->SetTexture( "tex_skysphere", gSkyImages.reflection );
+      float mipCount = floor( log2( gCurrentSkyImage.reflection->mHeight ) );
+      gCurrentShader->SetTexture( "tex_skysphere", gCurrentSkyImage.reflection );
       gCurrentShader->SetConstant( "skysphere_mip_count", mipCount );
     }
-    if ( gSkyImages.env )
+    if ( gCurrentSkyImage.env )
     {
-      gCurrentShader->SetTexture( "tex_skyenv", gSkyImages.env );
+      gCurrentShader->SetTexture( "tex_skyenv", gCurrentSkyImage.env );
     }
     gCurrentShader->SetTexture( "tex_brdf_lut", gBrdfLookupTable );
     gCurrentShader->SetConstant( "exposure", exposure );
@@ -911,15 +1093,15 @@ int main( int argc, const char * argv[] )
     Renderer::ReleaseShader( skysphereShader );
     delete skysphereShader;
   }
-  if ( gSkyImages.reflection )
+  if ( gCurrentSkyImage.reflection )
   {
-    Renderer::ReleaseTexture( gSkyImages.reflection );
-    gSkyImages.reflection = NULL;
+    Renderer::ReleaseTexture( gCurrentSkyImage.reflection );
+    gCurrentSkyImage.reflection = NULL;
   }
-  if ( gSkyImages.env )
+  if ( gCurrentSkyImage.env )
   {
-    Renderer::ReleaseTexture( gSkyImages.env );
-    gSkyImages.env = NULL;
+    Renderer::ReleaseTexture( gCurrentSkyImage.env );
+    gCurrentSkyImage.env = NULL;
   }
 
   ImGui_ImplOpenGL3_Shutdown();
