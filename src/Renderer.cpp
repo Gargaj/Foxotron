@@ -451,6 +451,7 @@ Texture * CreateRGBA8TextureFromFile( const char * szFilename, const bool _loadA
   tex->mGLTextureID = glTexId;
   tex->mGLTextureUnit = textureUnit++;
   tex->mTransparent = hasTransparentPixels;
+  tex->mSRGB = _loadAsSRGB;
   tex->mRefCount = 1;
   return tex;
 }
@@ -517,6 +518,7 @@ Texture * CreateRGBA8TextureFromMemory( const unsigned char * pMemory, unsigned 
   tex->mGLTextureID = glTexId;
   tex->mGLTextureUnit = textureUnit++;
   tex->mTransparent = hasTransparentPixels;
+  tex->mSRGB = _loadAsSRGB;
   tex->mRefCount = 1;
   return tex;
 }
@@ -557,6 +559,7 @@ Texture * CreateRGBA8TextureFromRawData( const unsigned int * pRGBA, unsigned in
   tex->mGLTextureID = glTexId;
   tex->mGLTextureUnit = textureUnit++;
   tex->mTransparent = hasTransparentPixels;
+  tex->mSRGB = _loadAsSRGB;
   tex->mRefCount = 1;
   return tex;
 }

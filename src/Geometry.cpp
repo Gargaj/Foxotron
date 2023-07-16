@@ -343,7 +343,7 @@ bool Geometry::LoadMesh( const char * _path )
     LoadColorMap( this, scene->mMaterials[ i ], material.mColorMapMetallic, aiTextureType_METALNESS, "metallic", folder );
     LoadColorMap( this, scene->mMaterials[ i ], material.mColorMapAO, aiTextureType_AMBIENT_OCCLUSION, "AO", folder );
     LoadColorMap( this, scene->mMaterials[ i ], material.mColorMapAmbient, aiTextureType_AMBIENT, "ambient", folder );
-    LoadColorMap( this, scene->mMaterials[ i ], material.mColorMapEmissive, aiTextureType_EMISSIVE, "emissive", folder );
+    LoadColorMap( this, scene->mMaterials[ i ], material.mColorMapEmissive, aiTextureType_EMISSIVE, "emissive", folder, true );
 
     float f = 0.0f;
 

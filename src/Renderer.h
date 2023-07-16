@@ -37,6 +37,7 @@ struct Texture
   unsigned int mGLTextureID;
   int mGLTextureUnit;
   bool mTransparent;
+  bool mSRGB;
   int mRefCount;
 };
 

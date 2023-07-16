@@ -283,6 +283,7 @@ void ShowColorMapInImGui( const char * _channel, Geometry::ColorMap & _colorMap 
     {
       ImGui::Text( "Texture: %s", _colorMap.mTexture->mFilename.c_str() );
       ImGui::Text( "Is transparent: %s", _colorMap.mTexture->mTransparent ? "yes" : "no" );
+      ImGui::Text( "Is SRGB: %s", _colorMap.mTexture->mSRGB ? "yes" : "no" );
       ImGui::Text( "Dimensions: %d x %d", _colorMap.mTexture->mWidth, _colorMap.mTexture->mHeight );
       ImGui::Image( (void *) (intptr_t) _colorMap.mTexture->mGLTextureID, ImVec2( 512.0f, 512.0f ) );
     }
