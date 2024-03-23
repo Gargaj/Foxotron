@@ -6,7 +6,8 @@ jobs:
     steps:
     - name: Get date
       id: date
-      run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+      run: |
+        echo "date=$(date +"%Y-%m-%d")" >> $env:GITHUB_OUTPUT
     - name: Checkout
       uses: actions/checkout@v2
       with:
