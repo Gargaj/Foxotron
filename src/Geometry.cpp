@@ -268,7 +268,6 @@ bool Geometry::LoadMesh( const char * _path )
       // Data is a file
       renderTexture = Renderer::CreateRGBA8TextureFromMemory( (unsigned char *) texture->pcData, texture->mWidth, true ); // TODO: currently forced to sRGB (problematic)
       renderTexture->mFilename = texture->mFilename.C_Str();
-      mEmbeddedTextures.push_back( renderTexture );
     }
     else
     {
