@@ -261,6 +261,8 @@ void ShowNodeInImGui( int _parentID )
       {
         const Geometry::Mesh & mesh = gModel.mMeshes[ it->second.mMeshes[ i ] ];
         ImGui::TextColored( ImVec4( 1.0f, 0.5f, 1.0f, 1.0f ), "Mesh %d: %d vertices, %d triangles", i + 1, mesh.mVertexCount, mesh.mTriangleCount );
+        ImGui::SameLine();
+        ImGui::TextColored( ImVec4( 1.0f, 0.75f, 1.0f, 1.0f ), "Material: %s", gModel.mMaterials[ mesh.mMaterialIndex ].mName.c_str() );        
       }
 
       ShowNodeInImGui( it->second.mID );

@@ -148,7 +148,7 @@ bool LoadColorMap( Geometry * _geometry, aiMaterial * _material, Geometry::Color
       result = aiGetMaterialColor( _material, AI_MATKEY_COLOR_DIFFUSE, &color );
       result2 = aiGetMaterialColor( _material, AI_MATKEY_COLOR_TRANSPARENT, &translucentColor );
       if ( result2 == AI_SUCCESS )
-        color.a = ( 1.0 - translucentColor.r );
+        color.a = ( 1.0f - translucentColor.r );
       break;
     case aiTextureType_SPECULAR:
       result = aiGetMaterialColor( _material, AI_MATKEY_COLOR_SPECULAR, &color );
@@ -262,6 +262,7 @@ bool Geometry::LoadMesh( const char * _path )
   {
     aiTexture * texture = scene->mTextures[ i ];
     Renderer::Texture * renderTexture = NULL;
+    printf( "[geometry] Loading embedded texture #%d: %s\n", i, texture->mFilename.C_Str() );
     if ( texture->mHeight == 0 )
     {
       // Data is a file
