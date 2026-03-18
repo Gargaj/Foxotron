@@ -79,6 +79,7 @@ glm::vec3 gCameraTarget( 0.0f, 0.0f, 0.0f );
 float gCameraDistance = 500.0f;
 Geometry gModel;
 
+float exposure = 1.0f;
 float gCameraYaw = glm::pi<float>() / 4.0f;
 float gCameraPitch = 0.25f;
 float gLightYaw = 0.0f;
@@ -169,6 +170,10 @@ void LoadMeshConfig( const char * path )
   {
     gSkysphereBlur = (float) meshconfig.get<jsonxx::Number>( "skysphereBlur" );
   }
+  if ( meshconfig.has<jsonxx::Number>( "exposure" ) )
+  {
+    exposure = (float) meshconfig.get<jsonxx::Number>( "exposure" );
+  }
   if ( meshconfig.has<jsonxx::Array>( "clearColor" ) )
   {
     gClearColor.x = (float) meshconfig.get<jsonxx::Array>( "clearColor" ).get<jsonxx::Number>( 0 );
@@ -204,6 +209,7 @@ void SaveMeshConfig( const char * path )
   meshconfig << "lightPitch" << gLightPitch;
   meshconfig << "skysphereOpacity" << gSkysphereOpacity;
   meshconfig << "skysphereBlur" << gSkysphereBlur;
+  meshconfig << "exposure" << exposure;
 
   jsonxx::Array clearColorArray;
   clearColorArray << gClearColor.x;
@@ -518,7 +524,6 @@ int main( int argc, const char * argv[] )
   float mouseClickPosX = 0.0f;
   float mouseClickPosY = 0.0f;
   std::string supportedExtensions = Geometry::GetSupportedExtensions();
-  float exposure = 1.0f;
   bool showImGui = true;
   bool edgedFaces = false;
   float hideCursorTimer = 0.0f;
