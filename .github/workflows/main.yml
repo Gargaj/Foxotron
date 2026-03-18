@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install deps
-      run: sudo apt-get update && sudo apt-get install -q -y xorg-dev libasound2-dev libfontconfig1-dev libgl1-mesa-dev libglu1-mesa-dev
+      run: sudo apt-get update && sudo apt-get install -q -y xorg-dev libwayland-dev libxkbcommon-dev libasound2-dev libfontconfig1-dev libgl1-mesa-dev libglu1-mesa-dev zlib1g-dev
     - name: Checkout
       uses: actions/checkout@v4
       with:
