@@ -14,6 +14,7 @@
 #include "ImGuiFileBrowser.h"
 
 #include "ext.hpp"
+#define GLM_ENABLE_EXPERIMENTAL
 #include "gtx/rotate_vector.hpp"
 
 #include <jsonxx.h>
@@ -563,42 +564,42 @@ int main( int argc, const char * argv[] )
     
     ImGui::SetMouseCursor( hideCursorTimer <= 5.0f ? ImGuiMouseCursor_Arrow : ImGuiMouseCursor_None );
 
-    if ( ImGui::IsKeyPressed( GLFW_KEY_F, false ) )
+    if ( ImGui::IsKeyPressed( ImGuiKey_F, false ) )
     {
       gCameraTarget = ( gModel.mAABBMin + gModel.mAABBMax ) / 2.0f;
       gCameraDistance = glm::length( gCameraTarget - gModel.mAABBMin ) * 4.0f;
       gCameraYaw = glm::pi<float>() / 4.0f;
       gCameraPitch = 0.25f;
     }
-    if ( ImGui::IsKeyPressed( GLFW_KEY_F11, false ) )
+    if ( ImGui::IsKeyPressed( ImGuiKey_F11, false ) )
     {
       showImGui = !showImGui;
     }
-    if ( ImGui::IsKeyPressed( GLFW_KEY_W, false ) )
+    if ( ImGui::IsKeyPressed( ImGuiKey_W, false ) )
     {
       edgedFaces = !edgedFaces;
     }
-    if ( ImGui::IsKeyPressed( GLFW_KEY_C, false ) )
+    if ( ImGui::IsKeyPressed( ImGuiKey_C, false ) )
     {
       automaticCamera = !automaticCamera;
     }
-    if ( ImGui::IsKeyPressed( GLFW_KEY_O, false ) && ( ImGui::IsKeyDown( GLFW_KEY_LEFT_CONTROL ) || ImGui::IsKeyDown( GLFW_KEY_RIGHT_CONTROL ) ) )
+    if ( ImGui::IsKeyPressed( ImGuiKey_O, false ) && ( ImGui::IsKeyDown( ImGuiKey_LeftCtrl ) || ImGui::IsKeyDown( ImGuiKey_RightCtrl ) ) )
     {
       openFileDialog = true;
     }
-    if ( ImGui::IsKeyPressed( GLFW_KEY_S, false ) && ( ImGui::IsKeyDown( GLFW_KEY_LEFT_CONTROL ) || ImGui::IsKeyDown( GLFW_KEY_RIGHT_CONTROL ) ) )
+    if ( ImGui::IsKeyPressed( ImGuiKey_S, false ) && ( ImGui::IsKeyDown( ImGuiKey_LeftCtrl ) || ImGui::IsKeyDown( ImGuiKey_RightCtrl ) ) )
     {
       saveMeshConfig = true;
     }
-    if ( ImGui::IsKeyPressed( GLFW_KEY_L, false ) && ( ImGui::IsKeyDown( GLFW_KEY_LEFT_CONTROL ) || ImGui::IsKeyDown( GLFW_KEY_RIGHT_CONTROL ) ) )
+    if ( ImGui::IsKeyPressed( ImGuiKey_L, false ) && ( ImGui::IsKeyDown( ImGuiKey_LeftCtrl ) || ImGui::IsKeyDown( ImGuiKey_RightCtrl ) ) )
     {
       reloadMeshConfig = true;
     }
-    if ( ImGui::IsKeyPressed( GLFW_KEY_ENTER, false ) && ( ImGui::IsKeyDown( GLFW_KEY_LEFT_ALT ) || ImGui::IsKeyDown( GLFW_KEY_RIGHT_ALT ) ) )
+    if ( ImGui::IsKeyPressed( ImGuiKey_Enter, false ) && ( ImGui::IsKeyDown( ImGuiKey_LeftAlt ) || ImGui::IsKeyDown( ImGuiKey_RightAlt ) ) )
     {
       Renderer::SwitchFullscreen( Renderer::eMode == RENDERER_WINDOWMODE_WINDOWED ? RENDERER_WINDOWMODE_FULLSCREEN : RENDERER_WINDOWMODE_WINDOWED );
     }
-    if ( ImGui::IsKeyPressed( GLFW_KEY_PAGE_UP, false ) )
+    if ( ImGui::IsKeyPressed( ImGuiKey_PageUp, false ) )
     {
       const int shaderCount = gOptions.get<jsonxx::Array>( "shaders" ).size();
       for ( int i = 0; i < shaderCount; i++ )
@@ -613,7 +614,7 @@ int main( int argc, const char * argv[] )
         }
       }
     }
-    if ( ImGui::IsKeyPressed( GLFW_KEY_PAGE_DOWN, false ) )
+    if ( ImGui::IsKeyPressed( ImGuiKey_PageDown, false ) )
     {
       const int shaderCount = gOptions.get<jsonxx::Array>( "shaders" ).size();
       for ( int i = 0; i < shaderCount; i++ )
@@ -783,7 +784,7 @@ int main( int argc, const char * argv[] )
         }
 
         ImGui::Text( "Triangle count: %d", triCount );
-        ImGui::Text( "Mesh count: %d", gModel.mMeshes.size() );
+        ImGui::Text( "Mesh count: %ld", gModel.mMeshes.size() );
 
         ImGui::EndTabItem();
       }
@@ -795,7 +796,7 @@ int main( int argc, const char * argv[] )
       }
       if ( ImGui::BeginTabItem( "Textures / Materials" ) )
       {
-        ImGui::Text( "Material count: %d", gModel.mMaterials.size() );
+        ImGui::Text( "Material count: %ld", gModel.mMaterials.size() );
 
         for ( std::map<int, Geometry::Material>::iterator it = gModel.mMaterials.begin(); it != gModel.mMaterials.end(); it++ )
         {

@@ -9,7 +9,7 @@
 #include <assimp/LogStream.hpp>
 #include <assimp/DefaultLogger.hpp>
 #include <assimp/Exporter.hpp>
-
+#include <iostream>
 #include <glm.hpp>
 #include <common.hpp>
 
@@ -686,6 +686,7 @@ std::string Geometry::GetSupportedExtensions()
 {
   std::string out;
   gImporter.GetExtensionList( out );
+  std::cout << out << std::endl;
 
   for ( int i = 0; i < out.length(); i++ )
   {
