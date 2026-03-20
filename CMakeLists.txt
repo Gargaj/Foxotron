@@ -85,8 +85,7 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
-set(GLFW_VULKAN_STATIC OFF CACHE BOOL "" FORCE)
-mark_as_advanced(BUILD_SHARED_LIBS GLFW_BUILD_EXAMPLES GLFW_BUILD_TESTS GLFW_BUILD_DOCS GLFW_INSTALL GLFW_VULKAN_STATIC)
+mark_as_advanced(BUILD_SHARED_LIBS GLFW_BUILD_EXAMPLES GLFW_BUILD_TESTS GLFW_BUILD_DOCS GLFW_INSTALL)
 if (UNIX)
   set(GLFW_USE_OSMESA OFF CACHE BOOL "" FORCE)
   mark_as_advanced(GLFW_USE_OSMESA)
@@ -94,6 +93,25 @@ endif()
 if (WIN32)
   set(USE_MSVC_RUNTIME_LIBRARY_DLL OFF CACHE BOOL "" FORCE)
   mark_as_advanced(USE_MSVC_RUNTIME_LIBRARY_DLL)
+
+  # foreach copied from old GLFW commit
+  foreach (flag CMAKE_C_FLAGS
+               CMAKE_C_FLAGS_DEBUG
+               CMAKE_C_FLAGS_RELEASE
+               CMAKE_C_FLAGS_MINSIZEREL
+               CMAKE_C_FLAGS_RELWITHDEBINFO)
+
+       if (${flag} MATCHES "/MD")
+           message(MD="${flag}")
+           string(REGEX REPLACE "/MD" "/MT" ${flag} "${${flag}}")
+       endif()
+       if (${flag} MATCHES "/MDd")
+           message(MDd="${flag}")
+           string(REGEX REPLACE "/MDd" "/MTd" ${flag} "${${flag}}")
+       endif()
+
+   endforeach()
+  
 endif()
 add_subdirectory(${CMAKE_SOURCE_DIR}/externals/glfw/)
 set(FXTRN_PROJECT_INCLUDES ${FXTRN_PROJECT_INCLUDES} ${CMAKE_SOURCE_DIR}/externals/glfw/include)
@@ -159,6 +177,7 @@ file(GLOB IMGUIADDONS_SRCS
 add_library(FXTRN_ImGuiAddons STATIC ${IMGUIADDONS_SRCS})
 target_include_directories(FXTRN_ImGuiAddons PUBLIC 
   ${CMAKE_SOURCE_DIR}/externals/imgui 
+  ${CMAKE_SOURCE_DIR}/externals/imgui-addons/FileBrowser
 )
 if (MSVC)
   target_compile_options(FXTRN_ImGuiAddons PUBLIC "$<$<CONFIG:Release>:/MT>")
